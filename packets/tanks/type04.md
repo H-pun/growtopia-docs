@@ -51,7 +51,7 @@ Content of second item flags:
 
 This data might by followed by extra tile data. There can be determined if there are any extra tile data by item id. This is done by checking item id in items data and getting it's action type. Item type then has to be translated into extra tile data type, which requires translation table and can't be sadly done by other way. Then if this type is other than 0, tile extra data are added.
 
-You can read more about tile extra data more [here](/Docs/Packets/Tanks/Extra%20Tile%20Data/README.md).
+You can read more about tile extra data more [here](/packets/tanks/Extra%20Tile%20Data/README.md).
 
 ### Dropped items description
 
