@@ -40,12 +40,12 @@ The table below details each field in the items data structure, including its ty
 | 9   | Cook time            | uint32  | TODO: Docs                                                                  |
 | 10  | Texture X            | uint8   | The X coordinate of the sprite in the sprite sheet, in multiples of 32      |
 | 11  | Texture Y            | uint8   | The Y coordinate of the sprite in the sprite sheet, in multiples of 32      |
-| 12  | Render Type          | uint8   | [Type](item_types.md) of the render the sprite Ex: 1 (spread like airt)     |
+| 12  | Render Type          | uint8   | [Type](item_types.md) of the render the sprite Ex: 1 (spread like dirt)     |
 | 13  | Layer                | uint8   | TODO: Docs                                                                  |
 | 14  | Collision type       | uint8   | 0 - no collision, 1 - full collision                                        |
 | 15  | Block health         | uint8   | Damage points needed to destroy the tile (6 per punch, 7.5 with pickaxe)    |
 | 16  | Regen time           | uint32  | Time needed to reset punch damage on item                                   |
-| 17  | Clothing type        | uint8   | [Type](item_types.md) of the clothes like 7 (hair) or 1 (shirt)             |
+| 17  | Clothing type        | uint8   | [Type](item_types.md) of the clothes EX: 7 (hair) or 1 (shirt)              |
 | 18  | Rarity               | uint16  | Item rarity (set to 999 if none)                                            |
 | 19  | Max items            | uint8   | 200 usually, 2 on the Growtorial Entrance                                   |
 | 20  | Extra file name      | string  | Usually used for audio, by default an empty string                          |
