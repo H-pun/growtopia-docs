@@ -3,7 +3,7 @@
 This repository contains markdown files that explain the inner workings of 🌲Growtopia. You’ll find detailed explanations and documentation, but almost no code.
 
 > [!NOTE]
-> This repo was updated at 14 November 2024 (GT v4.70+).
+> This repo was updated at 16 November 2024 (GT v4.70+).
 
 ## Contents
 - [Items.dat](items_dat/README.md)

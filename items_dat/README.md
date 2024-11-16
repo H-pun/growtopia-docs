@@ -26,6 +26,9 @@ The size of the field is determined by the following values:
 ## Items Fields Description
 The table below details each field in the items data structure, including its type and purpose.
 
+> [!NOTE]
+> There are still some unknown data fields, which will be represented in bytes.
+
 
 | #   | Field                | Type    | Description                                                                 |
 |-----|----------------------|---------|-----------------------------------------------------------------------------|
@@ -71,15 +74,16 @@ The table below details each field in the items data structure, including its ty
 | 40  | Dlayer1              | uint32  | TODO: Docs (v8)                                                             |
 | 41  | Dlayer2              | uint32  | TODO: Docs (v8)                                                             |
 | 42  | Properties2          | uint16  | TODO: Docs (v9)                                                             |
-| 43  | Unknown Data         | ?       | TODO: Docs (v9)                                                             |
+| 43  | Unknown Data         | 62 byte | TODO: Docs (v9)                                                             |
 | 44  | Tile Range           | uint32  | Domain range (like extractor dynamo)                                        |
 | 45  | Pile Range           | uint32  | Vault capacity (like storage vault capcity)                                 |
 | 46  | Custom Punch         | string  | TODO: Docs (v11)                                                            |
-| 47  | Unknown Data         | ?       | TODO: Docs (v12)                                                            |
+| 47  | Unknown Data         | 13 byte | TODO: Docs (v12)                                                            |
 | 48  | Clock Div            | uint32  | TODO: Docs (v13)                                                            |
 | 49  | Parent Id            | uint32  | TODO: Docs (v14)                                                            |
-| 50  | Unknown Data         | ?       | TODO: Docs (v15)                                                            |
+| 50  | Unknown Data         | 25 byte | TODO: Docs (v15)                                                            |
 | 51  | Alt Sit Path         | string  | TODO: Docs (v15)                                                            |
 | 52  | Unknown Data         | string  | TODO: Docs (v16)                                                            |
 | 53  | Unknown Data         | uint32  | TODO: Docs (v17)                                                            |
 | 54  | Unknown Data         | uint32  | TODO: Docs (v18)                                                            |
+| 55  | Unknown Data         | 9 byte  | TODO: Docs (v19)
