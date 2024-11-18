@@ -7,13 +7,21 @@ The `properties` field in the `items.dat` file is represented as an integer. Thi
 The following table summarizes the properties that can be derived from the integer value:
 
 | Bit Position | Integer Value | Description                                                                                  |
-|--------------|---------------|----------------------------------------------------------------------------------------------|
+| ------------ | ------------- | -------------------------------------------------------------------------------------------- |
 | 0            | 1             | This item can be placed in two directions, depending on the direction you're facing.         |
 | 1            | 2             | This item has special properties you can adjust with the wrench.                             |
 | 2            | 4             | This item never drops any seeds.                                                             |
+| 3            | 8             | This item is permanent.                                                                      |
+| 4            | 16            | This item never drops any seeds.                                                             |
+| 5            | 32            | This item can't be used on yourself.                                                         |
+| 6            | 64            | This item has no shadow.                                                                     |
+| 7            | 128           | This item can only be used in World-Locked worlds.                                           |
+| 8            | 256           | This item is in beta.                                                                        |
 | 9            | 512           | This item can't be destroyed - smashing it will return it to your backpack if you have room! |
+| 10           | 1024          | This item is a (mod) item                                                                    |
 | 11           | 2048          | A tree of this type can bear surprising fruit!                                               |
 | 12           | 4096          | This item is PUBLIC: Even if it's locked, anyone can smash it.                               |
+| 13           | 8192          | This item is in the foreground.                                                              |
 | 14           | 16384         | This item can only be created during WinterFest!                                             |
 | 15           | 32768         | This item cannot be dropped or traded.                                                       |
 
@@ -25,33 +33,36 @@ To determine which properties are active for a specific item, follow these steps
 2. Check each bit of the value, if a bit is active (i.e., the result of the **bitwise AND** operation with its corresponding integer value is greater than 0), include the corresponding property description.
 
 ### Example: Evaluating the Properties of **(World Lock)**
+
 Let's evaluate the properties of the **World Lock** with a properties value of **526**.
 
-1. **Convert 526 to binary:**  
+1. **Convert 526 to binary:**
 
    > `526` in binary is `1000001110`.
 
-    | Bit position | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-    |--------------|---|---|---|---|---|---|---|---|---|---|
-    | 526(bin)     | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 0 |
+   | Bit position | 9   | 8   | 7   | 6   | 5   | 4   | 3   | 2   | 1   | 0   |
+   | ------------ | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+   | 526(bin)     | 1   | 0   | 0   | 0   | 0   | 0   | 1   | 1   | 1   | 0   |
 
 2. **Check each relevant bit:**
-    
-    If the bit value is 1, it means the bit in that position is active, therefore the corresponding property is applicable to the item.
-    
-    | Bit Position | Active  | Description                                                                                  |
-    |--------------|---------|----------------------------------------------------------------------------------------------|
-    | 0            |   No    | This item can be placed in two directions, depending on the direction you're facing.         |
-    | 1            |   Yes   | This item has special properties you can adjust with the wrench.                             |
-    | 2            |   Yes   | This item never drops any seeds.                                                             |
-    | 9            |   Yes   | This item can't be destroyed - smashing it will return it to your backpack if you have room! |
-    | 11           |   No    | A tree of this type can bear surprising fruit!                                               |
-    | 12           |   No    | This item is PUBLIC: Even if it's locked, anyone can smash it.                               |
-    | 14           |   No    | This item can only be created during WinterFest!                                             |
-    | 15           |   No    | This item cannot be dropped or traded.                                                       |
+
+   If the bit value is 1, it means the bit in that position is active, therefore the corresponding property is applicable to the item.
+
+   | Bit Position | Active | Description                                                                                  |
+   | ------------ | ------ | -------------------------------------------------------------------------------------------- |
+   | 0            | No     | This item can be placed in two directions, depending on the direction you're facing.         |
+   | 1            | Yes    | This item has special properties you can adjust with the wrench.                             |
+   | 2            | Yes    | This item never drops any seeds.                                                             |
+   | 9            | Yes    | This item can't be destroyed - smashing it will return it to your backpack if you have room! |
+   | 11           | No     | A tree of this type can bear surprising fruit!                                               |
+   | 12           | No     | This item is PUBLIC: Even if it's locked, anyone can smash it.                               |
+   | 14           | No     | This item can only be created during WinterFest!                                             |
+   | 15           | No     | This item cannot be dropped or traded.                                                       |
 
 ### Resulting Properties
+
 Based on the evaluation, the following properties are active for an item with the properties value of **526**:
+
 - "This item has special properties you can adjust with the wrench."
 - "This item never drops any seeds."
 - "This item can't be destroyed - smashing it will return it to your backpack if you have room!"
