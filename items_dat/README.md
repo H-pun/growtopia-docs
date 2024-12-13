@@ -6,10 +6,13 @@ It is possible to first decoded items database on [this page](https://wombat.pla
 ## Items data structure
 This structure begins with information about file and then this is followed by adding all items one after another.
 
-### Beginning structure:
-
->uint16 for file version - this is updated when new fields are added
-uint32 for item count
+### Header structure:
+| Field             | Type              | Note                                                    |
+|------------------ |-------------------|---------------------------------------------------------|
+| items.dat Version | uint8             |                                                         |
+| Unknown Data      | uint8             |                                                         |
+| Item Count        | uint8 and uint8   | `byte + byte << 8` to get item count                    |
+| Unknown Data      | uint16            |                                                         |
 
 
 ## Types Description
