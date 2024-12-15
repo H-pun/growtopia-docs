@@ -54,17 +54,18 @@ Collision types define how tiles interact with players and other objects in the 
 | Value | Name                          | Comment                                                                    |
 |-------|-------------------------------|----------------------------------------------------------------------------|
 | 0     | Tile Collision None           | No collision, players can pass through freely.                             |
-| 1     | Tile Collision Jump Through   | Players can jump through from below but not fall through from above.       |
-| 2     | Tile Collision Jump Down      | Players can jump down through the tile.                                    |
-| 3     | Tile Collision Gateway        | Acts as a gateway or portal to another location.                           |
-| 4     | Tile Collision If Off         | Collision is active when the tile is off.                                  |
-| 5     | Tile Collision If On          | Collision is active when the tile is on.                                   |
-| 6     | Tile Collision One Way        | Allows movement in one direction only.                                     |
-| 7     | Tile Collision Vip            | Restricted to VIP players only.                                            |
-| 8     | Tile Collision Adventure      | Used in adventure mode for specific interactions.                          |
-| 9     | Tile Collision Faction        | Restricted to players of a specific faction.                               |
-| 10    | Tile Collision Guild          | Restricted to guild members only.                                          |
-| 11    | Tile Collision Cloud          | Acts like a cloud, allowing players to pass through in certain conditions. |
+| 1     | Tile Collision Full           | Full collision, players cannot pass through.                               |
+| 2     | Tile Collision Jump Through   | Players can jump through from below but not fall through from above.       |
+| 3     | Tile Collision Jump Down      | Players can jump down through the tile.                                    |
+| 4     | Tile Collision Gateway        | Acts as a gateway or portal to another location.                           |
+| 5     | Tile Collision If Off         | Collision is active when the tile is off.                                  |
+| 6     | Tile Collision If On          | Collision is active when the tile is on.                                   |
+| 7     | Tile Collision One Way        | Allows movement in one direction only.                                     |
+| 8     | Tile Collision Vip            | Restricted to VIP players only.                                            |
+| 9     | Tile Collision Adventure      | Used in adventure mode for specific interactions.                          |
+| 10    | Tile Collision Faction        | Restricted to players of a specific faction.                               |
+| 11    | Tile Collision Guild          | Restricted to guild members only.                                          |
+| 12    | Tile Collision Cloud          | Acts like a cloud, allowing players to pass through in certain conditions. |
 
 ## Visual Effects
 
