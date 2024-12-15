@@ -66,7 +66,6 @@ Collision types define how tiles interact with players and other objects in the 
 | 10    | Tile Collision Guild          | Restricted to guild members only.                                          |
 | 11    | Tile Collision Cloud          | Acts like a cloud, allowing players to pass through in certain conditions. |
 
-
 ## Visual Effects
 
 The `visual_effect` enum defines various visual effects that can be applied to items in the game. Here's the list of visual effects:
@@ -129,154 +128,163 @@ If you're delving into the world of `items.dat` and need clarity on the various 
 
 Please note that some type numbers are skipped for unknown reasons:
 > [!NOTE]
-> Some users on Discord mentioned that this exists in the `extra data` of `items.dat`, but I'm not sure what it means.
-- Type No. 30
+> The following item types are not used by any items in `items.dat` at the time this file was last updated. These types were discovered through reverse engineering, thanks to [FakeLeq](https://github.com/FakeLeq/growtopia-utility/blob/main/items_dat/item_flags.h) and [badewen](https://github.com/badewen/Growtopia-Things/blob/main/parsers/ItemInfo.h).
+
+- Type No. 30 // RaceFlag
 - Type No. 48 // Toybox
 - Type No. 121 // Autodelete
-- Type No. 133
-- Type No. 137
-- Type No. 139
+- Type No. 133 // PveNpc
+- Type No. 137 // Completionist
+- Type No. 139 // AnzuBlock
+- Type No. 143 // Pearl
 
 Refer to the table below for detailed information on each item type found in `items.dat`:
 > [!NOTE]
 > The `flag` field mentioned here isn’t part of `items.dat` itself; it’s something I use to help identify and differentiate certain unordinary items.
 
-| Type | name                                    | flag    |
-|------|-----------------------------------------|---------|
-| 0    | Fist                                    | Special |
-| 1    | Wrench                                  | Special |
-| 2    | Door                                    |         |
-| 3    | Lock                                    |         |
-| 4    | Gems                                    | Special |
-| 5    | Treasure                                |         |
-| 6    | Deadly Block                            |         |
-| 7    | Trampoline Block                        |         |
-| 8    | Consumable                              |         |
-| 9    | Entrance                                |         |
-| 10   | Sign                                    |         |
-| 11   | SFX Block                               |         |
-| 12   | Toggleable Animated Block               |         |
-| 13   | Main Door                               | Special |
-| 14   | Platform                                |         |
-| 15   | Bedrock                                 | Special |
-| 16   | Pain Block (Lava)                       |         |
-| 17   | Foreground Block                        |         |
-| 18   | Background Block                        |         |
-| 19   | Seed                                    | Special |
-| 20   | Clothes                                 |         |
-| 21   | Animated Block                          |         |
-| 22   | SFX Wallpaper                           |         |
-| 23   | Toggleable Wallpaper                    |         |
-| 24   | Bouncy Block                            |         |
-| 25   | Pain Block (Spike)                      |         |
-| 26   | Portal                                  |         |
-| 27   | Checkpoint                              |         |
-| 28   | Sheet Music                             |         |
-| 29   | Slippery Block                          |         |
-| 31   | Toggleable Block                        |         |
-| 32   | Chest                                   |         |
-| 33   | Mailbox                                 |         |
-| 34   | Bulletin Board                          |         |
-| 35   | Event Mystery Block                     |         |
-| 36   | Random Block                            |         |
-| 37   | Component                               |         |
-| 38   | Provider                                |         |
-| 39   | Chemical Combiner                       |         |
-| 40   | Achievement Block                       |         |
-| 41   | Weather Machine                         |         |
-| 42   | Scoreboard                              |         |
-| 43   | Sungate                                 |         |
-| 44   | Internal                                | Special |
-| 45   | Toggleable Deadly Block                 |         |
-| 46   | Heart Monitor                           |         |
-| 47   | Donation Box                            |         |
-| 49   | Mannequin                               |         |
-| 50   | Security Camera                         |         |
-| 51   | Magic Egg                               |         |
-| 52   | Game Block                              |         |
-| 53   | Game Generator                          |         |
-| 54   | Xenonite Crystal                        |         |
-| 55   | Phone Booth                             |         |
-| 56   | Crystal                                 |         |
-| 57   | Crime Villain                           |         |
-| 58   | Clothing Compactor                      |         |
-| 59   | Spotlight                               |         |
-| 60   | Pushing Block                           |         |
-| 61   | Display Block                           |         |
-| 62   | Vending Machine                         |         |
-| 63   | Fish Tank Port                          |         |
-| 64   | Fish                                    |         |
-| 65   | Solar Collector                         |         |
-| 66   | Forge                                   |         |
-| 67   | Giving Tree                             |         |
-| 68   | Giving Tree Stump                       |         |
-| 69   | Steam Block                             |         |
-| 70   | Pain Block (Steam)                      |         |
-| 71   | Music Block (Steam)                     |         |
-| 72   | Silkworm                                |         |
-| 73   | Sewing Machine                          |         |
-| 74   | Country Flag                            |         |
-| 75   | Lobster Trap                            |         |
-| 76   | Painting Easel                          |         |
-| 77   | Battle Pet Cage                         |         |
-| 78   | Pet Trainer                             |         |
-| 79   | Steam Engine                            |         |
-| 80   | Lock-Bot                                |         |
-| 81   | Weather Machine                         |         |
-| 82   | Spirit Storage                          |         |
-| 83   | Display Shelf                           |         |
-| 84   | VIP Entrance                            |         |
-| 85   | Challenge Timer                         |         |
-| 86   | Challenge Flag                          |         |
-| 87   | Fish Mount                              |         |
-| 88   | Portrait                                |         |
-| 89   | Weather Machine                         |         |
-| 90   | Fossil                                  |         |
-| 91   | Fossil Prep Station                     |         |
-| 92   | DNA Processor                           |         |
-| 93   | Howler                                  |         |
-| 94   | Valhowla Treasure                       |         |
-| 95   | Chemsynth Processor                     |         |
-| 96   | Chemsynth Tank                          |         |
-| 97   | Storage Box                             |         |
-| 98   | Cooking Oven                            |         |
-| 99   | Audio Block                             |         |
-| 100  | Geiger Charger                          |         |
-| 101  | Adventure Begin                         |         |
-| 102  | Tomb Robber                             |         |
-| 103  | Balloon                                 |         |
-| 104  | Entrance (Punch)                        |         |
-| 105  | Entrance (Grow)                         |         |
-| 106  | Entrance (Build)                        |         |
-| 107  | Artifact                                |         |
-| 108  | Jelly Block                             |         |
-| 109  | Training Port                           |         |
-| 110  | Fishing Block                           |         |
-| 111  | Magplant                                |         |
-| 112  | Magplant Remote                         |         |
-| 113  | CyBlock Bot                             |         |
-| 114  | CyBlock Command                         |         |
-| 115  | Lucky Token                             |         |
-| 116  | GrowScan 9000                           |         |
-| 117  | Containment Field Power Node            |         |
-| 118  | Spirit Board                            |         |
-| 119  | World Architect                         |         |
-| 120  | Startopia Block                         |         |
-| 122  | Toggleable Multi-Framed Animated Block  |         |
-| 123  | Autobreak (Block)                       |         |
-| 124  | Autobreak (Trees)                       |         |
-| 125  | Autobreak                               |         |
-| 126  | Storm Cloud                             |         |
-| 127  | Disappear when stepped on               |         |
-| 128  | Puddle Block                            |         |
-| 129  | Background Block                        |         |
-| 130  | Safe Vault                              |         |
-| 131  | Angelic Counting Cloud                  |         |
-| 132  | Mining Explosives                       |         |
-| 134  | Infinity Weather Machine                |         |
-| 135  | Sliming Block                           |         |
-| 136  | Pain Block (Acid)                       |         |
-| 138  | Waving Inflatable Arm Guy               |         |
-| 140  | Pineapple Guzzler                       |         |
-| 141  | Kranken's Galactic Block                |         |
-| 142  | Friends Entrance                        |         |
+| Type | System Name                    | Wiki Name                       | Flag    |
+|------|--------------------------------|---------------------------------|---------|
+| 0    | Fist                           | Fist                            | Special |
+| 1    | Wrench                         | Wrench                          | Special |
+| 2    | UserDoor                       | Door                            |         |
+| 3    | Lock                           | Lock                            |         |
+| 4    | Gems                           | Gems                            | Special |
+| 5    | Treasure                       | Treasure                        |         |
+| 6    | Deadly                         | Deadly Block                    |         |
+| 7    | Trampoline                     | Trampoline Block                |         |
+| 8    | Consumable                     | Consumable                      |         |
+| 9    | Gateway                        | Entrance                        |         |
+| 10   | Sign                           | Sign                            |         |
+| 11   | SfxWithExtraFrame              | SFX Block                       |         |
+| 12   | Boombox                        | Toggleable Animated Block       |         |
+| 13   | Door                           | Main Door                       | Special |
+| 14   | Platform                       | Platform                        |         |
+| 15   | Bedrock                        | Bedrock                         | Special |
+| 16   | Lava                           | Pain Block (Lava)               |         |
+| 17   | Normal                         | Foreground Block                |         |
+| 18   | Background                     | Background Block                |         |
+| 19   | Seed                           | Seed                            | Special |
+| 20   | Clothes                        | Clothes                         |         |
+| 21   | NormalWithExtraFrame           | Animated Block                  |         |
+| 22   | BackgdSfxExtraFrame            | SFX Wallpaper                   |         |
+| 23   | BackBoombox                    | Toggleable Wallpaper            |         |
+| 24   | Bouncy                         | Bouncy Block                    |         |
+| 25   | Pointy                         | Pain Block (Spike)              |         |
+| 26   | Portal                         | Portal                          |         |
+| 27   | Checkpoint                     | Checkpoint                      |         |
+| 28   | Musicnote                      | Sheet Music                     |         |
+| 29   | Ice                            | Slippery Block                  |         |
+| 30   | RaceFlag                       |                                 |         |
+| 31   | Switcheroo                     | Toggleable Block                |         |
+| 32   | Chest                          | Chest                           |         |
+| 33   | Mailbox                        | Mailbox                         |         |
+| 34   | Bulletin                       | Bulletin Board                  |         |
+| 35   | Pinata                         | Event Mystery Block             |         |
+| 36   | Dice                           | Random Block                    |         |
+| 37   | Component                      | Component                       |         |
+| 38   | Provider                       | Provider                        |         |
+| 39   | Lab                            | Chemical Combiner               |         |
+| 40   | Achievement                    | Achievement Block               |         |
+| 41   | WeatherMachine                 | Weather Machine                 |         |
+| 42   | Scoreboard                     | Scoreboard                      |         |
+| 43   | Sungate                        | Sungate                         |         |
+| 44   | Profile                        | Internal                        | Special |
+| 45   | DeadlyIfOn                     | Toggleable Deadly Block         |         |
+| 46   | HeartMonitor                   | Heart Monitor                   |         |
+| 47   | DonationBox                    | Donation Box                    |         |
+| 48   | Toybox                         |                                 |         |
+| 49   | Mannequin                      | Mannequin                       |         |
+| 50   | Camera                         | Security Camera                 |         |
+| 51   | Magicegg                       | Magic Egg                       |         |
+| 52   | Team                           | Game Block                      |         |
+| 53   | GameGen                        | Game Generator                  |         |
+| 54   | Xenonite                       | Xenonite Crystal                |         |
+| 55   | Dressup                        | Phone Booth                     |         |
+| 56   | Crystal                        | Crystal                         |         |
+| 57   | Burglar                        | Crime Villain                   |         |
+| 58   | Compactor                      | Clothing Compactor              |         |
+| 59   | Spotlight                      | Spotlight                       |         |
+| 60   | Wind                           | Pushing Block                   |         |
+| 61   | DisplayBlock                   | Display Block                   |         |
+| 62   | Vending                        | Vending Machine                 |         |
+| 63   | Fishtank                       | Fish Tank Port                  |         |
+| 64   | Petfish                        | Fish                            |         |
+| 65   | Solar                          | Solar Collector                 |         |
+| 66   | Forge                          | Forge                           |         |
+| 67   | GivingTree                     | Giving Tree                     |         |
+| 68   | GivingTreeStump                | Giving Tree Stump               |         |
+| 69   | Steampunk                      | Steam Block                     |         |
+| 70   | SteamLavaIfOn                  | Pain Block (Steam)              |         |
+| 71   | SteamOrgan                     | Music Block (Steam)             |         |
+| 72   | Tamagotchi                     | Silkworm                        |         |
+| 73   | Sewing                         | Sewing Machine                  |         |
+| 74   | Flag                           | Country Flag                    |         |
+| 75   | LobsterTrap                    | Lobster Trap                    |         |
+| 76   | Artcanvas                      | Painting Easel                  |         |
+| 77   | BattleCage                     | Battle Pet Cage                 |         |
+| 78   | PetTrainer                     | Pet Trainer                     |         |
+| 79   | SteamEngine                    | Steam Engine                    |         |
+| 80   | LockBot                        | Lock-Bot                        |         |
+| 81   | WeatherSpecial                 | Weather Machine                 |         |
+| 82   | SpiritStorage                  | Spirit Storage                  |         |
+| 83   | DisplayShelf                   | Display Shelf                   |         |
+| 84   | VipDoor                        | VIP Entrance                    |         |
+| 85   | ChalTimer                      | Challenge Timer                 |         |
+| 86   | ChalFlag                       | Challenge Flag                  |         |
+| 87   | FishMount                      | Fish Mount                      |         |
+| 88   | Portrait                       | Portrait                        |         |
+| 89   | WeatherSpecial2                | Weather Machine                 |         |
+| 90   | Fossil                         | Fossil                          |         |
+| 91   | FossilPrep                     | Fossil Prep Station             |         |
+| 92   | DnaMachine                     | DNA Processor                   |         |
+| 93   | Blaster                        | Howler                          |         |
+| 94   | Valhowla                       | Valhowla Treasure               |         |
+| 95   | Chemsynth                      | Chemsynth Processor             |         |
+| 96   | Chemtank                       | Chemsynth Tank                  |         |
+| 97   | Storage                        | Storage Box                     |         |
+| 98   | Oven                           | Cooking Oven                    |         |
+| 99   | SuperMusic                     | Audio Block                     |         |
+| 100  | Geigercharge                   | Geiger Charger                  |         |
+| 101  | AdventureReset                 | Adventure Begin                 |         |
+| 102  | TombRobber                     | Tomb Robber                     |         |
+| 103  | Faction                        | Balloon                         |         |
+| 104  | RedFaction                     | Entrance (Punch)                |         |
+| 105  | GreenFaction                   | Entrance (Grow)                 |         |
+| 106  | BlueFaction                    | Entrance (Build)                |         |
+| 107  | Artifact                       | Artifact                        |         |
+| 108  | TrampolineMomentum             | Jelly Block                     |         |
+| 109  | FishgotchiTank                 | Training Port                   |         |
+| 110  | FishingBlock                   | Fishing Block                   |         |
+| 111  | ItemSucker                     | Magplant                        |         |
+| 112  | ItemPlanter                    | Magplant Remote                 |         |
+| 113  | Robot                          | CyBlock Bot                     |         |
+| 114  | Command                        | CyBlock Command                 |         |
+| 115  | LuckyTicket                    | Lucky Token                     |         |
+| 116  | StatsBlock                     | GrowScan 9000                   |         |
+| 117  | FieldNode                      | Containment Field Power Node    |         |
+| 118  | OuijaBoard                     | Spirit Board                    |         |
+| 119  | ArchitectMachine               | World Architect                 |         |
+| 120  | Starship                       | Startopia Block                 |         |
+| 121  | Autodelete                     |                                 |         |
+| 122  | Boombox2                       | Toggleable Multi-Framed Animated Block |         |
+| 123  | AutoActionBreak                | Autobreak (Block)               |         |
+| 124  | AutoActionHarvest              | Autobreak (Trees)               |         |
+| 125  | AutoActionHarvestSuck          | Autobreak                       |         |
+| 126  | LightningCloud                 | Storm Cloud                     |         |
+| 127  | PhasedBlock                    | Disappear when stepped on       |         |
+| 128  | Mud                            | Puddle Block                    |         |
+| 129  | RootCutting                    | Background Block                |         |
+| 130  | PasswordStorage                | Safe Vault                      |         |
+| 131  | PhasedBlock2                   | Angelic Counting Cloud          |         |
+| 132  | Bomb                           | Mining Explosives               |         |
+| 133  | PveNpc                         |                                 |         |
+| 134  | InfinityWeatherMachine         | Infinity Weather Machine        |         |
+| 135  | Slime                          | Sliming Block                   |         |
+| 136  | Acid                           | Pain Block (Acid)               |         |
+| 137  | Completionist                  |                                 |         |
+| 138  | PunchToggle                    | Waving Inflatable Arm Guy       |         |
+| 139  | AnzuBlock                      |                                 |         |
+| 140  | FeedingBlock                   | Pineapple Guzzler               |         |
+| 141  | KrankensBlock                  | Kranken's Galactic Block        |         |
+| 142  | FriendsEntrance                | Friends Entrance                |         |
+| 143  | Pearls                         |                                 |         |
