@@ -1,0 +1,120 @@
+---
+title: Special Outfit Rendering & Edge Cases
+description: Deep dive into hovering, flight physics, limb invisibility masking (Rayman/Mermaid), mounts, pets, and the ItemRenderers XML system.
+---
+
+# Special Outfit Rendering & Edge Cases
+
+When developing an animated set planner, ordinary clothing items map predictably to body slots. However, numerous special items override the character rig, alter physics, suppress default body parts, or hook into multi-pass rendering.
+
+---
+
+## 1. Limb Visibility Masking (`eRenderObjectFlags`)
+
+Growtopia handles limb invisibility and body part suppression through a 10-bit bitmask (`eRenderObjectFlags`) evaluated by the renderer before drawing each layer:
+
+| Bit | Hex | Flag Name | In-Game Effect | Example Items |
+|---|---|---|---|---|
+| `Bit 0` | `0x001` | `RENDER_OBJECT_FLAG_NO_FEET` | Suppresses `RenderShoes` and default feet sprites. | Mermaid Tails, Hoverboards, Ghost Costumes |
+| `Bit 1` | `0x002` | `RENDER_OBJECT_FLAG_NO_LEGS` | Suppresses `RenderPants` and leg frames. | Long Robes, Raptor Legs, Ghastly Robe |
+| `Bit 2` | `0x004` | `RENDER_OBJECT_FLAG_HOVER` | Lifts player off the ground; activates hover idle. | Wings, Jetpacks, Floating Eyes, Magic Carpets |
+| `Bit 3` | `0x008` | `RENDER_OBJECT_FLAG_NO_FACE` | Suppresses facial expressions and eye blinking. | Full-face Helmets, TV Heads, Solid Masks |
+| `Bit 4` | `0x010` | `RENDER_OBJECT_FLAG_TRANSPARENT_SKIN` | Renders body and skin with 50% opacity / ghost alpha. | Tactical Stealth Device, Invisibility Potion |
+| `Bit 5` | `0x020` | `RENDER_OBJECT_FLAG_NO_ARMS` | Suppresses standard upper and lower arm sprites. | Rayman's Fists, Thingamabob |
+| `Bit 6` | `0x040` | `RENDER_OBJECT_FLAG_FRONT_ARM_PUNCH` | Overrides front arm with custom punch frame. | Custom punch gauntlets |
+| `Bit 7` | `0x080` | `RENDER_OBJECT_FLAG_REPLACEMENT_SPRITE` | Replaces default body texture with an item texture. | Specialized morph suits |
+| `Bit 8` | `0x0100` | `RENDER_OBJECT_FLAG_NO_HEAD` | Suppresses head base, face, and eyes completely. | Dullahan Head, Headless Horseman |
+| `Bit 9` | `0x0200` | `RENDER_OBJECT_FLAG_NO_SHADOWS` | Suppresses the ground drop shadow ellipse. | Ethereal Spirits, Flying Clouds |
+
+### The Rayman's Fists Special Case
+In the game binary (`0x100a73d81`), equipping **Rayman's Fists** (Item ID `5480`) activates `RENDER_OBJECT_FLAG_NO_ARMS`:
+- Standard upper arm and forearm sprites are hidden.
+- The gloves are drawn as floating disembodied hands.
+- **Full Rayman Set Bonus (`0x100a3ccae`):** If all 5 pieces (Fists `5480`, Feet `5482`, Hoody `5484`, Hair `5486`, Face `5488`) are equipped simultaneously, the client triggers an innate flight offset identical to riding mounts.
+
+### The Mermaid Tail Special Case
+Items like *Merrows Tail* or *Mermaid Tail* activate `RenderShoesWithMermaidTail`:
+- `RENDER_OBJECT_FLAG_NO_FEET` is toggled on (hiding feet and shoes).
+- `IsToRenderPants` is set to `false` (hiding trousers).
+- A 4-frame animated swimming tail sprite is rendered with sinusoidal swaying.
+
+---
+
+## 2. Flight & Hovering Mechanics
+
+Items with `RENDER_OBJECT_FLAG_HOVER` (or `ShouldHover = true` in their renderer config) change avatar physics:
+
+1. **Vertical Elevation:** The root pelvis anchor is raised by an offset `Y_float` (typically 10 to 14 pixels above ground).
+2. **Hover Oscillation:** A gentle sinusoidal vertical wave is applied continuously:
+   ```text
+   Y_hover(t) = Y_base + sin(t * 2.8) * 3.0
+   ```
+3. **Walk Cycle Suppression:** Walking stride is disabled (`DisableWalkAnimation = true`). Feet dangle slightly backward while moving.
+4. **Shadow Attenuation:** The ground drop shadow remains projected on the floor block, but scales down in size and drops to 40% opacity.
+
+---
+
+## 3. Mounts, Rides & Vehicles
+
+Vehicles (such as *Bone Bike*, *Cyber Cycle*, *Garuda Mount*, *Riding Rabbid*) utilize a **multi-pass split**:
+
+```text
+RenderBehind  --> [Draws rear wheels, rear bike frame, or saddle]
+  └── Avatar   --> [Character drawn in sitting pose at sit_transform offset]
+        └── RenderInFront --> [Draws front chassis, steering handlebars, windshield]
+```
+
+### Transform Overrides
+Vehicle renderers inject `<AvatarTransform>` directives into the character rig:
+- **`FootPosition`:** Sets `foot1dy = 0` and `foot2dy = 0` to lock the player's feet onto pedals or footrests instead of walking.
+- **`ArmAngle`:** Forces `arm1Angle` and `arm2Angle` to 280 degrees (gripping handlebars).
+- **`UserNameOffset`:** Shifts the player name label upward (e.g., +16 to +24 pixels) so it is not obscured by tall mounts.
+
+---
+
+## 4. Flying Pets & Familiars
+
+Items equipped with companion familiars (e.g., *Mighty Eagle*, *Missile Toad Pet*, *Noble Phoenix*) activate the `RenderPet` pass:
+
+- **Spring-Damper Following:** The pet does not stick rigidly to the player. It trails the avatar with smoothed spring lag:
+  ```text
+  X_pet(t) = X_player + (facingLeft ? 20 : -20) + sin(t * 2.0) * 2.0
+  Y_pet(t) = Y_player - 16.0 + cos(t * 2.5) * 3.0
+  ```
+- **Facing Mirroring:** When `PetUpdatesFacing = true`, the pet horizontally flips whenever the player turns left or right.
+- **Z-Index Layering:** Controlled by `IsPetBehind`. If `true`, the pet renders at Layer 2 (behind the player); if `false`, it renders at Layer 23 (in front of all clothing).
+
+---
+
+## 5. The Data-Driven `ItemRenderers` XML System
+
+For **319+ advanced items** in `items.dat` (starting in schema v16), field `s2` points to an external XML renderer definition stored in `GameData/ItemRenderers/<Name>.xml`.
+
+### XML Structure
+```xml
+<ItemRenderer>
+  <Data>
+    <!-- Spritesheet references -->
+    <Sprite name="s_wings" fileName="game/player_cosmetics4.rttex" textureSize="32" frame="0,4"/>
+    
+    <!-- State machine for animation -->
+    <StateMachines>
+      <StateMachine name="Motion">
+        <States>
+          <State name="Idle"/>
+          <State name="Walk"/>
+        </States>
+      </StateMachine>
+    </StateMachines>
+  </Data>
+
+  <!-- Pass hooks and condition filters -->
+  <RenderRules>
+    <RenderBackpack>
+      <SpriteRender name="s_wings" offset="0,-4" alignment="DOWN_CENTER"/>
+    </RenderBackpack>
+  </RenderRules>
+</ItemRenderer>
+```
+
+When building an animated set planner, supporting these XML files allows rendering advanced cosmetics (wings, auras, vehicles, and pets) without writing custom hardcoded JavaScript for every new item.

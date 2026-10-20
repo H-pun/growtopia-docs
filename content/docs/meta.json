@@ -2,6 +2,7 @@
   "title": "Docs",
   "pages": [
     "index",
+    "character-rendering",
     "http-server",
     "enet-server",
     "items-dat",
