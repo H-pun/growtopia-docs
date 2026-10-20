@@ -1,0 +1,123 @@
+---
+title: Seed Sprite Rendering
+description: How Growtopia dynamically colors and renders seed sprites from items.dat and game/seed.rttex.
+---
+
+# Seed Sprite Rendering
+
+In Growtopia, seed sprites are not stored as pre-colored textures. The engine dynamically colors and composites each seed sprite at runtime using a single grayscale template texture (`game/seed.rttex`) and color parameters defined in `items.dat`.
+
+![Laser Grid Seed Visual Breakdown](/images/items-dat/laser_grid_seed_breakdown.png)
+
+---
+
+## 1. The Grayscale Template (`game/seed.rttex`)
+
+The seed spritesheet is located in the game assets at `game/seed.rttex`. When decompressed (RTPACK/RTTX), it is a **256 × 32 pixel RGBA image** divided into two rows of 16 × 16 pixel cells:
+
+| Row | Y Range | Description | Indexed By |
+|---|---|---|---|
+| **Row 0 (Top)** | Y: 0 to 15 | 16 Base seed shapes (core body) | `seed_base` (0..15) |
+| **Row 1 (Bottom)** | Y: 16 to 31 | 16 Overlay seed shapes (patterns, spots, accents) | `seed_over` (0..15) |
+
+### Grayscale Characteristic
+Every non-transparent pixel in `game/seed.rttex` is pure grayscale:
+
+```text
+R == G == B   (pixel values range from 55 to 255)
+```
+
+Because the texture is strictly grayscale, lighting and shading gradients are encoded purely in pixel brightness.
+
+---
+
+## 2. Properties in `items.dat`
+
+Each seed item defines four color and shape properties:
+
+| Field | Type | Description |
+|---|---|---|
+| `seed_base` | `uint8` | Column index of base shape in Row 0 (`X = seed_base * 16`). |
+| `seed_over` | `uint8` | Column index of overlay pattern in Row 1 (`X = seed_over * 16`). |
+| `bg_col` | `uint32` | Tint color for the base body (Little-Endian integer). |
+| `fg_col` | `uint32` | Tint color for the overlay pattern (Little-Endian integer). |
+
+### Unpacking Little-Endian 32-bit Colors
+
+In memory and in `items.dat`, colors are packed as 32-bit Little-Endian integers (`[A, R, G, B]`):
+
+| Byte Offset | Channel | Bitmask & Shift |
+|---|---|---|
+| Byte 0 | **Alpha (A)** | `val & 0xFF` |
+| Byte 1 | **Red (R)** | `(val >> 8) & 0xFF` |
+| Byte 2 | **Green (G)** | `(val >> 16) & 0xFF` |
+| Byte 3 | **Blue (B)** | `(val >> 24) & 0xFF` |
+
+<Callout type="warn" title="Color Endianness Warning">
+Do not treat the integer as Big-Endian ARGB (`val >> 24` as Alpha, `val >> 16` as Red). Doing so will invert or swap color channels.
+</Callout>
+
+---
+
+## 3. Shader Color Modulation
+
+Growtopia's OpenGL fragment shader (`ColoredTexture.fs`) modulates texture color by component-wise multiplication:
+
+```glsl
+gl_FragColor = u_color * texture2D(s_texture, v_texcoord0);
+```
+
+In integer arithmetic (0 to 255), the formula for each channel is:
+
+```text
+Channel_out = (Texture_channel * Tint_channel) / 255
+```
+
+Both RGB and Alpha channels undergo this modulation:
+- `Red_out = (Tex_R * Tint_R) / 255`
+- `Green_out = (Tex_G * Tint_G) / 255`
+- `Blue_out = (Tex_B * Tint_B) / 255`
+- `Alpha_out = (Tex_A * Tint_A) / 255`
+
+---
+
+## 4. Layer Compositing (Porter-Duff Alpha Blend)
+
+Once both layers are tinted:
+1. **Base Layer:** The cropped base sprite (16 × 16) modulated by `bg_col`.
+2. **Overlay Layer:** The cropped overlay sprite (16 × 16) modulated by `fg_col`.
+
+The overlay is composited on top of the base layer using standard OpenGL alpha blending (`GL_SRC_ALPHA`, `GL_ONE_MINUS_SRC_ALPHA`):
+
+```text
+Color_final = (Color_over * Alpha_over) + (Color_base * (1.0 - Alpha_over))
+```
+
+<Callout type="error" title="Alpha Blending Bug in PIL">
+In Python (PIL / Pillow), always use `Image.alpha_composite(img_base, img_over)` instead of `img_base.paste(img_over, mask=img_over)`.
+
+`Image.paste()` with a mask erodes the underlying base alpha on semi-transparent anti-aliased edge pixels (alpha dropping from 255 to ~214..242), creating faint transparent holes around seed borders when placed over non-black backgrounds.
+</Callout>
+
+---
+
+## 5. Minimal Python Implementation
+
+```python
+from PIL import Image
+import numpy as np
+
+def render_seed(sheet: Image.Image, base_idx: int, over_idx: int, bg_col: int, fg_col: int) -> Image.Image:
+    unpack = lambda c: np.array([(c >> 8) & 0xFF, (c >> 16) & 0xFF, (c >> 24) & 0xFF, c & 0xFF], dtype=np.float32)
+    b_raw = np.array(sheet.crop((base_idx * 16, 0, (base_idx + 1) * 16, 16)), dtype=np.float32)
+    o_raw = np.array(sheet.crop((over_idx * 16, 16, (over_idx + 1) * 16, 32)), dtype=np.float32)
+    b_tint = Image.fromarray(((b_raw * unpack(bg_col)) / 255.0).astype(np.uint8), "RGBA")
+    o_tint = Image.fromarray(((o_raw * unpack(fg_col)) / 255.0).astype(np.uint8), "RGBA")
+    return Image.alpha_composite(b_tint, o_tint)
+
+# Laser Grid Seed (ID: 5667)
+if __name__ == "__main__":
+    sheet = Image.open("seed.png")
+    seed_img = render_seed(sheet, base_idx=1, over_idx=2, bg_col=0xaeaeaeff, fg_col=0x241cedff)
+    seed_img.resize((128, 128), Image.Resampling.NEAREST).save("laser_grid_seed.png")
+```

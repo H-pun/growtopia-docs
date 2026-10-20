@@ -16,8 +16,9 @@ There are four kinds of flags used to determine the properties of an item:
 3. **Flag3**: These properties are used for even more specialized functionalities and behaviors.
 4. **FlagFX**: These properties are related to visual effects and animations associated with the item.
 
-> [!NOTE]
-> The properties for **Flag3** are still under research due to the extensive number of properties and their complex interactions. Any contribution will be much appreciated.
+<Callout type="info" title="Flag3 Research">
+The properties for **Flag3** are still under research due to the extensive number of properties and their complex interactions. Any contribution will be much appreciated.
+</Callout>
 
 Each flag type has its own set of bit positions and corresponding integer values that determine the active properties for an item.
 The following table summarizes the properties that can be derived from the integer value:
@@ -42,8 +43,9 @@ The following table summarizes the properties that can be derived from the integ
 | 14           | 16384         | Holiday       | This item can only be created during WinterFest!                                             |
 | 15           | 32768         | Untradeable   | This item cannot be dropped or traded.                                                       |
 
-> [!WARNING]
-> Some of the properties might be out of order. If you know the correct order or have any additional information, feel free to open an issue or contribute. This applies to both **Flag2** and **FlagFX** properties. 
+<Callout type="warn" title="Property Order">
+Some of the properties might be out of order. If you know the correct order or have any additional information, feel free to open an issue or contribute. This applies to both **Flag2** and **FlagFX** properties.
+</Callout> 
 
 | Bit Position | Integer Value | Flag2                  | Description          |
 |--------------|---------------|------------------------|----------------------|
@@ -143,8 +145,9 @@ Based on the evaluation, the following properties are active for an item with th
 - "This item never drops any seeds."
 - "This item can't be destroyed - smashing it will return it to your backpack if you have room!"
 
-> [!NOTE]
-> Some properties aren't meant to be shown in the game description. For example, "This item is permanent" is not displayed in the game.
+<Callout type="info" title="Hidden In-Game Properties">
+Some properties aren't meant to be shown in the game description. For example, "This item is permanent" is not displayed in the game.
+</Callout>
 
 ### Missing Properties
 

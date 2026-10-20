@@ -4,6 +4,8 @@
     "index",
     "types-definitions",
     "cypher",
+    "seed-rendering",
+    "description",
     "item-properties",
     "item-types"
   ]

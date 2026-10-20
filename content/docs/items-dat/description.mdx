@@ -1,0 +1,106 @@
+---
+title: Item Descriptions
+description: How in-game item descriptions are embedded and extracted from items.dat (v22+).
+---
+
+# Item Descriptions
+
+Starting in **`items.dat` schema version 22**, in-game item descriptions (the text displayed when wrenching an item or viewing its information in the backpack) are embedded directly within the binary database file.
+
+Prior to version 22, the client fetched descriptions dynamically from external web endpoints or server packets.
+
+---
+
+## 1. Binary Structure & Encoding
+
+The description field is located near the end of each item record in `items.dat` (immediately following `aura_slots` from v21).
+
+| Field | Type | Encrypted? | Description |
+|---|---|---|---|
+| `description_length` | `uint16` | No | Number of bytes in the description string. |
+| `description` | `bytes` | **No** (Plaintext) | ASCII / UTF-8 string containing the full item description text. |
+
+<Callout type="info" title="Plaintext String">
+Unlike item `name` (which is XOR encrypted), the **`description` string is stored as completely unencrypted plaintext**.
+</Callout>
+
+---
+
+## 2. Examples from Game Data
+
+### Laser Grid (Item ID: `5666`)
+```text
+This is just a harmless frame with cool-looking lights on it, right? Huh. Now they're getting brighter. And hotter. Um... maybe you should move. No, faster than that! FASTER!
+```
+
+### Dirt (Item ID: `2`)
+```text
+Yep, it's dirt.
+```
+
+### Fist (Item ID: `18`)
+```text
+Nothing can stand against the power of the FIST.
+```
+
+### Seeds (e.g., Laser Grid Seed, ID: `5667`)
+Most seed items do not have custom description lore and default to:
+```text
+No info.
+```
+or an empty string (`description_length = 0`).
+
+---
+
+## 3. Minimal Python Extraction Example
+
+Because `description` is plaintext, extraction only requires stepping through the binary struct up to the description offset:
+
+```python
+import struct
+
+def get_item_description(items_dat_path: str, target_id: int) -> str:
+    with open(items_dat_path, "rb") as f:
+        buf = f.read()
+
+    version, count = struct.unpack_from("<HI", buf, 0)
+    pos = 6
+    if version < 22:
+        raise ValueError("Requires items.dat v22+")
+
+    for _ in range(count):
+        item_id = struct.unpack_from("<I", buf, pos)[0]; pos += 8
+        for _ in range(2): # skip name, texture_file
+            pos += 2 + struct.unpack_from("<H", buf, pos)[0]
+        pos += 23 # visual, cook, coords, stats, max_hold
+        pos += 2 + struct.unpack_from("<H", buf, pos)[0] # alt_file
+        pos += 8 # alt_hash, anim_ms
+        for _ in range(4): # pet strings
+            pos += 2 + struct.unpack_from("<H", buf, pos)[0]
+        pos += 24 # seeds, trees, colors, bloom, c4, 2ac
+        for _ in range(3): # anim strings
+            pos += 2 + struct.unpack_from("<H", buf, pos)[0]
+        pos += 80 # dlayer, props2, bot_params, range
+        pos += 2 + struct.unpack_from("<H", buf, pos)[0] # punch
+        pos += 46 # scales, clock, parent, sit
+        pos += 2 + struct.unpack_from("<H", buf, pos)[0] # alt_sit
+        pos += 2 + struct.unpack_from("<H", buf, pos)[0] # alt_hair
+        pos += 19 # light, shader, bounds, aura
+
+        # Description (Plaintext UTF-8 / ASCII)
+        desc_len = struct.unpack_from("<H", buf, pos)[0]; pos += 2
+        desc = buf[pos:pos+desc_len].decode("utf-8", errors="replace"); pos += desc_len
+
+        pos += 5 # seed1, seed2, guild
+        pos += 2 + struct.unpack_from("<H", buf, pos)[0] # hit_fx
+        pos += 5 # fx_params, untradable
+        pos += 2 + struct.unpack_from("<H", buf, pos)[0] # v27_data
+
+        if item_id == target_id:
+            return desc
+    return ""
+
+if __name__ == "__main__":
+    desc = get_item_description("items.dat", 5666)
+    print(f"Laser Grid (ID 5666):\n{desc}")
+```
