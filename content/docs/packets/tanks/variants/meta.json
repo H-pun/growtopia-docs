@@ -1,0 +1,17 @@
+{
+  "title": "Variant Calls",
+  "pages": [
+    "index",
+    "on-console-message",
+    "on-dialog-request",
+    "on-play-positioned",
+    "on-remove",
+    "on-set-clothing",
+    "on-set-freeze-state",
+    "on-spawn",
+    "on-super-main",
+    "on-text-overlay",
+    "set-has-grow-id",
+    "set-respawn-pos"
+  ]
+}

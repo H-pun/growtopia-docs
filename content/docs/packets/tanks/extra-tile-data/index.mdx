@@ -1,0 +1,101 @@
+---
+title: Extra Tile Data Overview
+description: Types and structure of extra tile data for interactive blocks.
+---
+
+# Extra tile data
+
+Extra tile data always begin with extra tile type, which is always one byte in size. It is also by this possible to change title's behavior by assigning it different extra tile type if it already has one, but this also might lead into some unexcepted crashes.
+
+Extra tile data types:
+- [000 - No extra data](/docs/packets/tanks/extra-tile-data/type-000)
+- [001 - Door](/docs/packets/tanks/extra-tile-data/type-001)
+- [002 - Sign](/docs/packets/tanks/extra-tile-data/type-002)
+- [003 - Lock](/docs/packets/tanks/extra-tile-data/type-003)
+- [004 - Seed](/docs/packets/tanks/extra-tile-data/type-004)
+- 005 - ???
+- [006 - Mailbox](/docs/packets/tanks/extra-tile-data/type-006)
+- [007 - Bulletin board](/docs/packets/tanks/extra-tile-data/type-007)
+- [008 - Dice](/docs/packets/tanks/extra-tile-data/type-008)
+- [009 - Chemical source](/docs/packets/tanks/extra-tile-data/type-009)
+- [010 - Achievement block](/docs/packets/tanks/extra-tile-data/type-010)
+- [011 - Heart monitor](/docs/packets/tanks/extra-tile-data/type-011)
+- [012 - Donation box](/docs/packets/tanks/extra-tile-data/type-012)
+- 013 - ???
+- [014 - Mannequin](/docs/packets/tanks/extra-tile-data/type-014)
+- [015 - Bunny egg](/docs/packets/tanks/extra-tile-data/type-015)
+- [016 - Game pack](/docs/packets/tanks/extra-tile-data/type-016)
+- [017 - Game generator](/docs/packets/tanks/extra-tile-data/type-017)
+- [018 - Xeonite crystal](/docs/packets/tanks/extra-tile-data/type-018)
+- [019 - Phone booth](/docs/packets/tanks/extra-tile-data/type-019)
+- [020 - Crystal](/docs/packets/tanks/extra-tile-data/type-020)
+- [021 - Crime in progress](/docs/packets/tanks/extra-tile-data/type-021)
+- 022 - ???
+- [023 - Display block](/docs/packets/tanks/extra-tile-data/type-023)
+- [024 - Vending machine](/docs/packets/tanks/extra-tile-data/type-024)
+- 025 - ???
+- 026 - ???
+- 027 - ???
+- [028 - Giving tree](/docs/packets/tanks/extra-tile-data/type-028)
+- [033 - Country flag](/docs/packets/tanks/extra-tile-data/type-033)
+- 034 - ???
+- 035 - ???
+- 036 - ???
+- 037 - ???
+- 038 - ???
+- 039 - ???
+- [040 - Weather machine background](/docs/packets/tanks/extra-tile-data/type-040)
+
+Action type to extra tile type conversion:
+- 2 => 1
+- 3 => 3
+- 10 => 2
+- 13 => 1
+- 19 => 4
+- 26 => 1
+- 33 => 6
+- 34 => 7
+- 36 => 8
+- 38 => 9
+- 40 => 10
+- 43 => 1
+- 46 => 11
+- 47 => 12
+- 48 => 13
+- 49 => 14
+- 51 => 15
+- 52 => 16
+- 53 => 17
+- 54 => 18
+- 55 => 19
+- 56 => 20
+- 57 => 21
+- 59 => 22
+- 61 => 23
+- 62 => 24
+- 63 => 25
+- 65 => 26
+- 66 => 27
+- 67 => 28
+- 68 => 29
+- 71 => 30
+- 72 => 31
+- 73 => 32
+- 74 => 33
+- 75 => 34
+- 76 => 35
+- 77 => 36
+- 78 => 37
+- 79 => 38
+- 80 => 39
+- 81 => 40
+- 82 => 41
+- 83 => 43
+- 84 => 44
+- 85 => 45
+- 86 => 33
+- 87 => 47
+- 88 => 48
+- 89 => 49
+- 92 => 51
+- other => 0

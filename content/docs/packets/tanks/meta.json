@@ -1,0 +1,11 @@
+{
+  "title": "Tank Packets",
+  "pages": [
+    "type-00",
+    "type-01",
+    "type-04",
+    "type-16",
+    "extra-tile-data",
+    "variants"
+  ]
+}

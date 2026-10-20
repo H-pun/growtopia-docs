@@ -1,0 +1,10 @@
+{
+  "title": "Items.dat",
+  "pages": [
+    "index",
+    "types-definitions",
+    "cypher",
+    "item-properties",
+    "item-types"
+  ]
+}

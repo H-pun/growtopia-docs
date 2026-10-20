@@ -1,0 +1,58 @@
+---
+title: Packet Type 4 (Tank Packet)
+description: Game state and tank action packet structure.
+---
+
+# Packet type 4
+
+Packet senders:
+- [x] Client
+- [x] Server
+
+This is one of most complicated packets. Also this is one of few packets which have known official name, which is Tank Packet. It contains it's own packet type together with static structure and data with dynamic length which can be placed on end of packet. Also when there is choosen variant packet as packet type, then you can pack onto it another layer of data.
+
+So let's look at packet structure first (it is always 56 bytes, not counting extended data):
+- uint8 - Packet type
+- uint8 - ...
+- uint8 - ...
+- uint8 - ...
+- uint32 - NetID
+- uint32 - ...
+- uint32 - ...
+- uint32 - ...
+- uint32 - ...
+- float - ...
+- float - ...
+- float - ...
+- float - ...
+- float - ...
+- uint32 - ...
+- uint32 - ...
+- uint32 - Extended data length
+
+
+
+
+Packet types:
+- [00 - Character Update State](/docs/packets/tanks/type-00)
+- [01 - Variant Packet](/docs/packets/tanks/type-01)
+- 02 - ... *(Unimplemented)*
+- 03 - ... *(Unimplemented)*
+- [04 - World Packet](/docs/packets/tanks/type-04)
+- 05 - ... *(Unimplemented)*
+- 06 - ... *(Unimplemented)*
+- 07 - ... *(Unimplemented)*
+- 08 - ... *(Unimplemented)*
+- 09 - Inventory Update Packet *(Unimplemented)*
+- 10 - ... *(Unimplemented)*
+- 11 - ... *(Unimplemented)*
+- 12 - ... *(Unimplemented)*
+- 13 - ... *(Unimplemented)*
+- 14 - ... *(Unimplemented)*
+- 15 - ... *(Unimplemented)*
+- [16 - Items Data Packet](/docs/packets/tanks/type-16)
+- 17 - ... *(Unimplemented)*
+- 18 - ... *(Unimplemented)*
+- 19 - ... *(Unimplemented)*
+- 20 - ... *(Unimplemented)*
+- 21 - ... *(Unimplemented)*

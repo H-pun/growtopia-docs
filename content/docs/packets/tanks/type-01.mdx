@@ -1,0 +1,17 @@
+---
+title: Type 01 - Variant Packet
+description: VariantList function call packet via ProtonSDK.
+---
+
+# Tank packet Type 1
+
+Packet senders:
+- [ ] Client
+- [x] Server
+
+Fields used:
+- [x] NetID
+- [x] [Variant Packet](/docs/packets/tanks/variants)
+
+
+This packet is known as variant packet. It contains in extended data format known as VariantList which is coming from ProtonSDK. First item in VariantList is always a string which is name of function which should be executed.
