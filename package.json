@@ -1,37 +1,36 @@
 {
   "name": "growtopia-docs",
-  "version": "0.0.0",
+  "version": "0.0.49",
   "private": true,
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "start": "next start",
-    "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
-    "postinstall": "fumadocs-mdx",
+    "types:check": "next typegen && tsc --noEmit",
     "lint": "eslint"
   },
   "dependencies": {
-    "fumadocs-core": "16.7.16",
-    "fumadocs-mdx": "14.2.14",
-    "fumadocs-ui": "16.7.16",
-    "lucide-react": "^1.8.0",
+    "cn": "^0.4.0",
+    "fumadocs-core": "16.17.7",
+    "fumadocs-mdx": "15.4.8",
+    "fumadocs-ui": "npm:@fumadocs/base-ui@16.17.7",
+    "lucide-react": "^1.50.0",
     "mermaid": "^12.2.0",
-    "next": "16.2.3",
+    "next": "16.3.8",
     "next-themes": "^0.4.6",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "tailwind-merge": "^3.5.0"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.2",
-    "@types/mdx": "^2.0.13",
-    "@types/node": "^25.6.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "eslint": "^10.2.0",
-    "eslint-config-next": "16.2.3",
-    "postcss": "^8.5.9",
-    "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.2"
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.3.8",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
   }
 }

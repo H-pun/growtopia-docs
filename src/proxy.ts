@@ -7,7 +7,7 @@ const { rewrite: rewriteDocs } = rewritePath(
   `${docsContentRoute}{/*path}/content.md`,
 );
 const { rewrite: rewriteSuffix } = rewritePath(
-  `${docsRoute}{/*path}.mdx`,
+  `${docsRoute}{/*path}.md`,
   `${docsContentRoute}{/*path}/content.md`,
 );
 
@@ -21,7 +21,10 @@ export default function proxy(request: NextRequest) {
     const result = rewriteDocs(request.nextUrl.pathname);
 
     if (result) {
-      return NextResponse.rewrite(new URL(result, request.nextUrl));
+      return NextResponse.rewrite(new URL(result, request.nextUrl), {
+        // this URL has two representations, selected by `Accept`
+        headers: { Vary: 'Accept' },
+      });
     }
   }
 
