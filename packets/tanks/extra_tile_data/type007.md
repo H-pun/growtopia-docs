@@ -1,7 +1,0 @@
-# Bulletin board tile extra data
-
-Values:
-- string - ???
-- string - ???
-- string - ???
-- uint8 - ???

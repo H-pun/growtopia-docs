@@ -1,28 +1,45 @@
-# Growtopia Docs
+# growtopia-docs
 
-This repository contains markdown files that explain the inner workings of 🌲Growtopia. You’ll find detailed explanations and documentation, but almost no code.
+This is a Next.js application generated with
+[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
 
-> [!NOTE]
-> This repo was updated at 15 December 2024 (GT v5.01+).
+Run development server:
 
-## Contents
-- [Items.dat](items_dat/README.md)
-- [HTTPs Server](http_server/README.md)
-- [Enet Server](enet_server/README.md)
-- [Packets](packets/README.md)
+```bash
+npm run dev
+# or
+pnpm dev
+# or
+yarn dev
+```
 
+Open http://localhost:3000 with your browser to see the result.
 
-## Contributing
+## Explore
 
-Contributions are welcome! If you have suggestions or would like to contribute to the documentation, please open an issue or submit a pull request.
+In the project, you can see:
 
-## Acknowledgements
+- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
+- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
 
-- GrowDocs by [@iProgramMC](https://github.com/iProgramMC/GrowDocs) (forked from [@GrowtopiaNoobs](https://github.com/GrowtopiaNoobs/GrowDocs))
-- Updated packet types by [@eikarna](https://github.com/eikarna/GrowDocs)
-- Some types and flags by [@FakeLeq](https://github.com/FakeLeq/growtopia-utility/blob/main/items_dat/item_flags.h) and [@badewen](https://github.com/badewen/Growtopia-Things/blob/main/parsers/ItemInfo.h)
+| Route                     | Description                                            |
+| ------------------------- | ------------------------------------------------------ |
+| `app/(home)`              | The route group for your landing page and other pages. |
+| `app/docs`                | The documentation layout and pages.                    |
+| `app/api/search/route.ts` | The Route Handler for search.                          |
 
-## Note
-This docs is for educational purposes only and intended to help people create companion apps. I am not responsible for any misuse of this docs.
+### Fumadocs MDX
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+A `source.config.ts` config file has been included, you can customise different options like frontmatter schema.
+
+Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+
+## Learn More
+
+To learn more about Next.js and Fumadocs, take a look at the following
+resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
+  features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs

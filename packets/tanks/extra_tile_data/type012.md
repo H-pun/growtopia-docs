@@ -1,7 +1,0 @@
-# Donation box tile extra data
-
-Values:
-- string - ???
-- string - ???
-- string - ???
-- uint8 - ???

@@ -1,6 +1,0 @@
-# Crime In Progress tile extra data
-
-Values:
-- string - ???
-- uint32 - ???
-- uint8 - ???
