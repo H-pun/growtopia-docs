@@ -1,0 +1,284 @@
+---
+title: ItemRenderers XML
+description: The data-driven renderer format. Covers file layout, render hooks and their anchors, sprites, transforms, conditions and animations, plus a minimal interpreter.
+---
+
+# ItemRenderers XML
+
+There are 618 XML files under `GameData/ItemRenderers/`. Each one describes how a single item draws itself. An item links to its file through the `renderer_file` string in `items.dat` (v16+). About 90 % of the file names are the item name with spaces and punctuation removed. The rest are free names, e.g. *Growch Biceps* uses `GrowchBod.xml`. Always read the name from `items.dat` instead of guessing it.
+
+<Callout type="info" title="Counts">
+Every count on this page was taken from all 618 files in the current macOS build.
+</Callout>
+
+---
+
+## 1. File Layout
+
+```xml
+<ItemRenderer>
+  <Data>
+    <Sprite name="s_armor" fileName="game/player_cosmetics3.rttex" textureSize="32" frame="0,17"/>
+    <VariableMap>
+      <Set name="armor_position">0, -14.85, 0</Set>
+    </VariableMap>
+    <Animations> ... </Animations>
+    <ParticleSystems> ... </ParticleSystems>
+    <StateMachines> ... </StateMachines>
+    <RenderOptions> ... </RenderOptions>
+  </Data>
+  <RenderRules>
+    <RenderShirt>
+      <Group>
+        <Translate>armor_position</Translate>
+        <SpriteRender name="s_armor"/>
+      </Group>
+    </RenderShirt>
+  </RenderRules>
+</ItemRenderer>
+```
+
+| Block | Purpose |
+|---|---|
+| `Sprite` | Names one cell of a texture. `textureSize` is the cell size (`32`, `64`, or `w,h`). `frame` is the cell's column and row. |
+| `VariableMap` | Named vectors. Any `Translate` / `offset` can reference them by name. |
+| `Animations` | Changes sprite frame, alpha, rotation, position, or a variable over time. |
+| `RenderRules` | One child per **hook**. Each child is a small draw program. |
+| `RenderOptions` | Flags read by the game (hover, vehicle, hide pants, etc.). |
+
+---
+
+## 2. Hooks
+
+Every hook replaces or adds to one step of the avatar draw. A hook named after a slot (`RenderShirt`, `RenderHat`, ...) **replaces** that slot's normal 32 × 32 blit. `RenderBehind` / `RenderInFront` are extra passes that run behind and in front of the whole avatar.
+
+| Hook | Files | When it runs |
+|---|---|---|
+| `RenderHandItem` | 74 | Instead of the hand item blit |
+| `RenderInFront` | 61 | After everything (front pass) |
+| `RenderBehind` | 61 | Before everything (back pass) |
+| `RenderShoes` | 53 | Instead of the shoes |
+| `RenderBackpack` | 53 | Instead of the back item |
+| `RenderBackHandItem` | 45 | Item in the rear hand, behind the body |
+| `RenderChestItem` | 43 | Instead of the chest item |
+| `RenderPet` | 22 | Pet companion |
+| others | — | `RenderFrontpack`, `RenderFrontArm`, `RenderBackArm`, `RenderHat`, `RenderBackHat`, `RenderHair`, `RenderBackHair`, `RenderFaceItem`, `RenderShirt`, `RenderPants`, `RenderAura`, `RenderTransform`, `RenderSittingInTheater` |
+
+A hook only fires for the item that owns the XML. One item can use several hooks. Arcane Armor, for example, has `RenderShirt` for the plate plus `RenderBehind` and `RenderInFront` for the floating claws.
+
+### Hook anchor
+
+A hook element can name an anchor in its `value` attribute:
+
+```xml
+<RenderBehind value="playerCenter"> ... </RenderBehind>
+```
+
+| `value` | Files | Meaning |
+|---|---|---|
+| `playerCenter` | 48 | Avatar position plus a per-state offset (riding, sitting) |
+| `playerGround` | 6 | Avatar position on the ground |
+| `x,y` | 3 | A fixed offset |
+| `shoulder`, `useWorldPos` | 2 | Arm / world anchor |
+
+Hooks without `value` use the anchor of the slot they replace.
+
+<Callout type="warn" title="Guess">
+How the client computes the anchor is only partly traced. It starts from the avatar position, then adds an offset that depends on whether the player is riding or sitting, and a facing shift. The planner currently uses the bottom-center of the body cell for both `playerCenter` and `playerGround`. On Arcane Armor this puts the claws about 4 px too high, so the real `playerCenter` is probably lower than that.
+</Callout>
+
+---
+
+## 3. Draw Program
+
+A hook body runs top to bottom. The canvas transform is cumulative, and each `Group` saves and restores it.
+
+| Element | Effect |
+|---|---|
+| `<Group>` | Push state, run children, pop state |
+| `<Translate>x,y</Translate>` | Move origin. Takes literal numbers or a variable name. |
+| `<Scale>sx,sy</Scale>` | Scale |
+| `<Rotate>deg</Rotate>` | Rotate |
+| `<Alpha>a</Alpha>` | Multiply opacity |
+| `<SpriteRender name=…/>` | Draw a sprite |
+| `<StopIf>` | End the hook early if a condition holds |
+| `<LineRender>`, `<ParticleSystemUpdate>`, `<AvatarTransform>` | Lines, particles, and avatar changes (face, arm angle, feet) |
+
+### `SpriteRender` attributes
+
+| Attribute | Uses | Meaning |
+|---|---|---|
+| `offset="x,y"` | common | Extra translate for this sprite only (literal or variable) |
+| `alignment` | 470 | Which point of the sprite sits on the origin: `CENTER` (default), `DOWN_CENTER` (259), `UPPER_CENTER` (65), `LEFT_CENTER`, `RIGHT_CENTER`, `DOWN_LEFT`, `DOWN_RIGHT` |
+| `flip="1,0"` | 71 | Mirror on X (`-1,0` also appears, 24 uses) |
+| `blend` | | `ADDITIVE` for glows. `PREMULTIPLIED_ALPHA` draws normally. |
+| `scale="sx,sy"` | | Per-sprite scale |
+| `onState`, `onAction` | | Only draw in that state (see below) |
+| `drawShadow="false"` | | Skip this sprite's drop shadow |
+
+```ts
+const ALIGN = { CENTER: [.5, .5], DOWN_CENTER: [.5, 1], UPPER_CENTER: [.5, 0],
+  LEFT_CENTER: [0, .5], RIGHT_CENTER: [1, .5], DOWN_LEFT: [0, 1], DOWN_RIGHT: [1, 1] };
+
+function spriteRender(g, sp, attrs, s) {
+  const [ax, ay] = ALIGN[attrs.alignment ?? 'CENTER'];
+  const [ox, oy] = vec(attrs.offset ?? '0,0');
+  g.save();
+  g.translate(ox * s, oy * s);
+  if (attrs.flip?.startsWith('1')) g.scale(-1, 1);
+  if (attrs.blend === 'ADDITIVE') g.globalCompositeOperation = 'lighter';
+  g.drawImage(img(sp.tex), sp.fx * sp.w, sp.fy * sp.h, sp.w, sp.h, -ax * sp.w * s, -ay * sp.h * s, sp.w * s, sp.h * s);
+  g.restore();
+}
+```
+
+---
+
+## 4. States and Conditions
+
+`onState` / `playOnState` name a state machine value, written `Machine.State`. Several values can be joined with `|`.
+
+```xml
+<SpriteRender name="right_arm" onState="Action.None"/>
+<SpriteAnimation ... playOnState="Movement.Horizontal"/>
+```
+
+The state machines are declared in the file itself (`StateMachines`). The game drives them from the player's movement and punching. Common ones are `Action.None|Punch`, `Motion.Idle|Moving`, `Movement.Idle|Walk|Horizontal` and `Facing.Left|Right`.
+
+`StopIf` checks conditions and returns from the hook when they match (`type="and"` requires all of them):
+
+```xml
+<StopIf>
+  <IsSitting ItemID="ITEM_ID_THEATER_SEAT">true</IsSitting>
+  <IsZombified>true</IsZombified>
+</StopIf>
+```
+
+Conditions by use count: `IsZombified` (257), `IsRenderMod` (234), `IsWearing` (219), `IsAction` (113), `IsSitting` (82), `IsTrnsformed` (71, typo is in the files), `IsSleepingOnaBed` (70), `IsVariableBool` (57), `CompareCustomVariable`, `IsItemTransformed`, `IsFacingLeft`, `IsRenderObjectFlag`, `IsVariableFloat`, `IsDancing`.
+
+<Callout type="info" title="Planner mapping">
+A planner has no real game state. Map its actions to state names (idle gives `Action.None` / `Motion.Idle`, walk gives `Motion.Moving` / `Movement.Walk`, and so on). Treat world-only conditions such as zombified or theater seat as false.
+</Callout>
+
+---
+
+## 5. Animations
+
+| Type | Files | What it animates |
+|---|---|---|
+| `SpriteAnimation` | 258 | Frame list, `animTime` ms per full loop |
+| `SpriteCurveAnimation` | 65 | Sprite `alpha`, `rotation`, `scale`, `pos` / `pos.y` over keyframes (alpha is by far the most common) |
+| `SpriteSinPulseAnimation` | 17 | Sine on one sprite parameter (`period` ms, `scale` amplitude) |
+| `SequenceAnimation` | 15 | Runs child animations one after another |
+| `CurveAnimationFloat` / `Vec2-4` | 33 | Keyframed variable (e.g. a lute swinging from −45° to 45°) |
+| `Interpolation{Float,Vec2,Vec3,Vec4}Animation` | 26 | Eases a variable toward a target when a state is entered |
+
+An animation plays when it has `autoPlay="true"`, when its `playOnState` is active, or on a `playOnAction`. `isLoop="true"` wraps the time. Without it, the animation holds its last value.
+
+Keyframes are `t, value...` with `t` running from 0 to 1 over `animTime`. Values between keyframes are linearly interpolated:
+
+```xml
+<SpriteCurveAnimation name="a_circletFloat" sprite="s_circlet" animTime="1400" autoPlay="true" isLoop="true">
+  <Curve name="pos.y">
+    <KeyFrame>0, -4</KeyFrame>
+    <KeyFrame>0.5, 0</KeyFrame>
+    <KeyFrame>1, -4</KeyFrame>
+  </Curve>
+</SpriteCurveAnimation>
+```
+
+```ts
+function curve(keys, p) {           // keys: [[t, v...], ...], p in 0..1
+  let i = 0;
+  while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
+  const a = keys[i], b = keys[i + 1] ?? a;
+  const u = b[0] > a[0] ? (p - a[0]) / (b[0] - a[0]) : 0;
+  return a.slice(1).map((v, j) => v + (b[j + 1] - v) * u);
+}
+const p = loop ? (t % animTime) / animTime : Math.min(t / animTime, 1);
+```
+
+`SpriteSinPulseAnimation`:
+
+```ts
+const v = Math.sin(2 * Math.PI * t / period) * scale;  // added to pos.x / pos.y, or alpha = 0.5 + v/2
+```
+
+---
+
+## 6. Render Options
+
+`RenderOptions` holds flags the game reads outside the draw program. The most frequent ones:
+
+| Option | Files | Effect |
+|---|---|---|
+| `IncludeAllActions` | 93 | Run the hook in every action state |
+| `RenderFrontArmInfected` / `RenderBackArmInfected` | 80 / 57 | Still draw arms while zombified |
+| `IgnorePunchTypeCheck` | 83 | |
+| `ShoesShouldIgnoreRaptorLegsOffset` | 33 | |
+| `ShouldHover` | 35 | Avatar floats (see [Animation Engine](/docs/character-rendering/animation-engine)) |
+| `RenderFrontArmInTheFront` | 27 | Front arm drawn after this item |
+| `IsToRenderPants` | 38 | `false` hides the pants |
+| `RenderShoesWithMermaidTail` | 24 | |
+| `NeedRenderPet` | 27 | |
+| `ShoesHidesBodyLegs` | 27 | Hide the leg strips |
+| `IsVehicle`, `IsCar`, `IsRidingBird`, `IsSurfboard` | | Ride behaviour |
+| `UserNameOffset` | | Raise the name tag (px) |
+
+---
+
+## 7. Minimal Interpreter
+
+The smallest useful interpreter covers `Sprite`, `VariableMap`, the draw program from section 3, `StopIf`, and three animation types (`SpriteAnimation`, `SpriteCurveAnimation`, `SpriteSinPulseAnimation`). With that, the static and looping visuals of most of the 618 files render correctly. Particles, `Interpolation*` and `Sequence` animations, and `AvatarTransform` can be added later.
+
+```ts
+function run(el, g, s, vars, ctx) {
+  for (const e of el.children) {
+    const st = e.getAttribute('onState');
+    if (st && !ctx.stateOn(st)) continue;
+    const v = () => vars.get(e.textContent.trim()) ?? nums(e.textContent);
+    switch (e.tagName) {
+      case 'StopIf':       if (ctx.stop(e)) return; break;
+      case 'Group':        g.save(); run(e, g, s, vars, ctx); g.restore(); break;
+      case 'Translate':    { const [x, y] = v(); g.translate(x * s, y * s); break; }
+      case 'Scale':        { const [x, y = x] = v(); g.scale(x, y); break; }
+      case 'Rotate':       g.rotate(v()[0] * Math.PI / 180); break;
+      case 'Alpha':        g.globalAlpha *= v()[0]; break;
+      case 'SpriteRender': spriteRender(g, sprites.get(e.getAttribute('name')), attrs(e), s); break;
+    }
+  }
+}
+
+// per frame, for each worn item that has a renderer
+g.save(); g.translate(anchorX, anchorY); run(rules.get('RenderShirt'), g, scale, animatedVars, ctx); g.restore();
+```
+
+Call the hooks in the avatar draw order:
+
+1. `RenderBehind`
+2. `RenderBackpack`
+3. `RenderBackHandItem`
+4. `RenderBackArm`
+5. `RenderBackHat` / `RenderBackHair`
+6. body and head
+7. `RenderShoes`
+8. `RenderPants`
+9. `RenderShirt`
+10. front arm, then `RenderFrontArm`
+11. `RenderChestItem`
+12. `RenderFaceItem`
+13. `RenderHair`
+14. `RenderHat`
+15. `RenderHandItem`
+16. `RenderFrontpack`
+17. `RenderInFront`
+
+When an item has the hook for its own slot, skip that slot's normal blit.
+
+<Callout type="warn" title="Open points">
+Still to confirm against reference screenshots:
+
+- The exact anchors for `playerCenter` and the hand item. `RenderHandItem` must follow the hand, not the body.
+- Particle systems.
+- How `RenderOptions` flags combine with `visual_type`.
+</Callout>

@@ -1,113 +1,181 @@
 ---
-title: Character Rendering Architecture
-description: Overview of the Growtopian avatar 2D skeletal compositor, base anatomy, and the 23-layer rendering pipeline.
+title: Character Rendering
+description: How the client draws a Growtopian avatar, including coordinate origin, body parts, draw order, tinting, and sleeves.
 ---
 
-# Character Rendering Architecture
+# Character Rendering
 
-In Growtopia, player avatars and outfits are not rendered as single flattened images. The game client utilizes a real-time **2D skeletal sprite compositor** that layers segmented body parts, clothing items, particle emitters, and accessories in a strict Z-order hierarchy.
+The client builds the avatar every frame from small 32 × 32 sprites. It has no pre-baked character image. Body parts are blitted around one avatar origin, and clothing is layered over them in a fixed order. Items that need more than one sprite go through one of the [special render paths](/docs/character-rendering/special-outfits).
 
-Third-party web tools (such as static set planners) typically rely on a backend image server that pastes cropped sprites into a single flat canvas with hardcoded exceptions. Replicating the authentic in-game visual fidelity and animation requires implementing the client's actual multi-pass layering and procedural skeletal transform pipeline.
-
----
-
-## 1. Base Character Anatomy
-
-The default unequipped character ("naked Growtopian") consists of separate body parts rendered on a **32 × 32 pixel** grid coordinate system:
-
-| Body Part | Asset File | Grid Cell / Dimensions | Description |
-|---|---|---|---|
-| **Head Base** | `game/player_head.rttex` | 32 × 32 | Skull base, ears, and base skin tone. Tinted by skin color (or `player_head_skin1..12.rttex`). |
-| **Torso** | `game/player_body_only.rttex` | 32 × 32 | Upper torso and chest. |
-| **Arms (Left & Right)** | `game/player_arm.rttex` | 32 × 32 | Upper arm, forearm, and hand. Modulated by skin color. |
-| **Sleeves** | `game/player_sleeve.rttex` | 32 × 32 | Drawn over arms when wearing shirts or jackets. |
-| **Feet & Legs** | `game/player_feet.rttex` | 32 × 32 | Bare feet and leg stride frames. |
-| **Eyes & Blink** | `game/player_eyes.rttex` | 32 × 32 | 3-frame eye blink animation (Open, Half, Closed). |
-| **Eye Iris** | `game/player_iris1.rttex` | 32 × 32 | Tinted eye pupil overlay (Contact Lenses). |
-| **Mouth & Expression** | `game/player_face.rttex` | 32 × 32 | Neutral, smiling, frowning, open mouth, or talking frames. |
-| **Punch Extension** | `game/player_puncharm.rttex` | 32 × 32 | Extended fist arm frame triggered during punch actions. |
-
-<Callout type="info" title="32x32 Pixel Standard">
-All player body parts, hair sprites, and clothing items are authored within 32 × 32 pixel cells on their respective spritesheets.
+<Callout type="info" title="Source">
+Everything on this page comes from the macOS x86_64 client (decompiled) and the textures shipped in the `.dmg`. Lines marked **guess** were fitted against reference screenshots and are not traced in code yet.
 </Callout>
 
 ---
 
-## 2. The 23-Layer Z-Order Rendering Pipeline
+## 1. Coordinate Origin
 
-The client binary (`AvatarRenderer`) draws character components and clothing in the following exact Z-order sequence (from back to front):
+Every part is positioned relative to the avatar origin `(X, Y)`:
 
-```mermaid
-graph TD
-    L1[1. Ground Shadow] --> L2[2. RenderBehind]
-    L2 --> L3[3. RenderAura]
-    L3 --> L4[4. RenderBackpack]
-    L4 --> L5[5. RenderBackHair]
-    L5 --> L6[6. RenderBackHat]
-    L6 --> L7[7. RenderBackArm]
-    L7 --> L8[8. RenderBackHandItem]
-    L8 --> L9[9. RenderChestBackItem]
-    L9 --> L10[10. RenderShoes / Feet]
-    L10 --> L11[11. RenderPants]
-    L11 --> L12[12. RenderShirt]
-    L12 --> L13[13. Base Body / Torso]
-    L13 --> L14[14. Face & Eyes]
-    L14 --> L15[15. RenderChestItem]
-    L15 --> L16[16. RenderFrontArm]
-    L16 --> L17[17. RenderHandItem]
-    L17 --> L18[18. RenderFaceItem]
-    L18 --> L19[19. RenderHair]
-    L19 --> L20[20. RenderHat]
-    L20 --> L21[21. RenderFrontpack]
-    L21 --> L22[22. RenderInFront]
-    L22 --> L23[23. RenderPet]
+- `X`: horizontal center of the 32 px avatar cell.
+- `Y`: bottom row of the cell (the ground line).
+
+Facing left mirrors the whole avatar around `X`. Arm rotations are negated as part of the mirror.
+
+```ts
+// cell top-left from origin
+const cellX = X - 16, cellY = Y - 32;
 ```
-
-### Layer Breakdown
-
-1. **Ground Shadow:** Elliptical drop shadow projected onto the tile beneath the player. Suppressed if `RENDER_OBJECT_FLAG_NO_SHADOWS` is active or if hovering at high altitude.
-2. **`RenderBehind`:** Rear components of complex mounts, chariots, chairs, or vehicles (e.g., rear bike wheel in *Bone Bike*).
-3. **`RenderAura`:** Full-body aura effects, glowing halos, and swirling elemental particle fields (e.g., *Infinity Aura*, *Beach Aura*).
-4. **`RenderBackpack`:** Wings, capes, jetpack thrusters, and quivers worn on the back (`clothing_type = 7`).
-5. **`RenderBackHair`:** Rear layer of long or cascading hair styles drawn behind the shoulders.
-6. **`RenderBackHat`:** Back brims, rear ribbons, and interior hood textures.
-7. **`RenderBackArm`:** Rear arm limb and rear sleeve. Swings opposite to the front arm during movement.
-8. **`RenderBackHandItem`:** Items held in the rear hand (shields, off-hand weapons, dual-wield blades).
-9. **`RenderChestBackItem`:** Straps, harness bands, and bandoliers wrapping around the back of the torso.
-10. **`RenderShoes`:** Footwear (`clothing_type = 4`) and feet. Can be replaced entirely by `RenderShoesWithMermaidTail` or suppressed by `RENDER_OBJECT_FLAG_NO_FEET`.
-11. **`RenderPants`:** Legwear and skirts (`clothing_type = 3`). Suppressed by `RENDER_OBJECT_FLAG_NO_LEGS` or long robes.
-12. **`RenderShirt`:** Torso clothing, armor, and vests (`clothing_type = 2`).
-13. **Base Body:** Core torso skin and neck connecting to the head.
-14. **Face & Eyes:** Mouth expression (`player_face.rttex`), blinking eye animation (`player_eyes.rttex`), and tinted iris overlay.
-15. **`RenderChestItem`:** Necklaces, scarves, ties, badges, and amulets (`clothing_type = 9`).
-16. **`RenderFrontArm`:** Front arm limb, front sleeve, or punch extension arm.
-17. **`RenderHandItem`:** Primary handheld tools, weapons, wands, and pickaxes (`clothing_type = 6`).
-18. **`RenderFaceItem`:** Glasses, sunglasses, masks, beards, and snout accessories (`clothing_type = 5`).
-19. **`RenderHair`:** Front hair bangs, cowlicks, and crests (`clothing_type = 8`).
-20. **`RenderHat`:** Headwear, helmets, caps, and crowns (`clothing_type = 1`).
-21. **`RenderFrontpack`:** Front harnesses, aprons, front plushies, and chest rigs.
-22. **`RenderInFront`:** Front chassis of mounts, steering wheels, vehicle dashboards, and handlebars.
-23. **`RenderPet`:** Floating pet companions, orbital familiars, and flying drones (`item_type = 28` or ItemRenderer pet hooks).
 
 ---
 
-## 3. Clothing Slot Types in `items.dat`
+## 2. Body Parts
 
-The numeric `clothing_type` field in `items.dat` maps an item to its primary body slot:
+| Part | Texture | How it is drawn |
+|---|---|---|
+| Body | `player_body_only` | One 32 × 32 frame. The column depends on what is worn (see below). |
+| Legs | `player_extraleg` | A 1 px tall strip, stretched vertically to `foot + 2` px. |
+| Head | `player_head` | 32 × 32 at the cell. |
+| Eyes / face | `player_eyes`, `player_face` | Blink frames or expression frame, same cell as the head. |
+| Feet | `player_feet` | One frame per foot, moved down by `foot` px. |
+| Arms | `player_arm` | 8 × 16 sprite, aligned upper-center and rotated around the shoulder. |
+| Sleeve | `player_sleeve` | 32 × 32 frame on top of each arm. Uses the arm's anchor and rotation. |
+| Sit pose | `player_sit` | Frame `(1, 0)`, aligned down-center at `(X, Y + 9)`. Replaces the legs and feet. |
 
-| `clothing_type` | Slot Name | Typical Spritesheet | Layer Pass |
-|---|---|---|---|
-| `0` | None | N/A | Non-wearable item |
-| `1` | **Hat** | `player_cosmetics*.rttex` | `RenderHat` / `RenderBackHat` |
-| `2` | **Shirt** | `player_shirt*.rttex` | `RenderShirt` |
-| `3` | **Pants** | `player_pants*.rttex` | `RenderPants` |
-| `4` | **Shoes** | `player_feet*.rttex` | `RenderShoes` |
-| `5` | **Face** | `player_faceitem*.rttex` | `RenderFaceItem` |
-| `6` | **Hand** | `player_handitem*.rttex` | `RenderHandItem` / `RenderBackHandItem` |
-| `7` | **Back** | `player_back*.rttex` | `RenderBackpack` |
-| `8` | **Hair** | `player_hair*.rttex` | `RenderHair` / `RenderBackHair` |
-| `9` | **Chest** | `player_chestitem*.rttex` | `RenderChestItem` |
+All of these except the eyes and face are tinted with the skin color (see [Tinting](#4-tinting)).
 
-<Callout type="warn" title="Ancestral Items">
-Ancestral Artifacts (e.g., *Ancestral Lens of Riches*) use `item_type = 36` rather than a standard `clothing_type`. They are equipped in a dedicated 10th slot and hook directly into `RenderAura` and particle emitter updates.
+### Body column
+
+The torso sprite contains bare skin and an undershirt/shorts version side by side. The column is picked from the shirt and pants slots:
+
+```ts
+const col = (shirt ? 1 : 0) + (pants ? 2 : 0);
+// 0 undershirt + shorts, 1 skin torso + shorts, 2 undershirt + skin hips, 3 all skin
+```
+
+Clothing is drawn on top afterwards. A shirt or pants sprite with holes therefore shows skin rather than the white undershirt.
+
+### Legs
+
+```ts
+// leg frame 0 at x+8 follows foot2, frame 1 at x+16 follows foot1
+drawImage(extraleg, 0, 0, 8, 1, cellX + 8,  cellY + 28, 8, foot2 + 2);
+drawImage(extraleg, 8, 0, 8, 1, cellX + 16, cellY + 28, 8, foot1 + 2);
+```
+
+<Callout type="warn" title="Guess">
+The strip's start row (`cellY + 28`) was pixel-fitted. The anchor mode in code is not decoded yet.
+</Callout>
+
+### Arms
+
+| Arm | Anchor | Rotation |
+|---|---|---|
+| Back arm | `(X + 8, Y - 14)` | `arm1` |
+| Front arm | `(X - 7, Y - 14)` | `arm2` |
+
+The arm is aligned upper-center with rotation point `(0, 1)`. The planner shifts the blit `-3` px in x to match pixel-for-pixel. That value is a **guess**, because the pivot math is not fully decoded.
+
+---
+
+## 3. Draw Order
+
+These steps are traced in code, from back to front:
+
+1. Back arm (+ sleeve)
+2. Body, then legs
+3. Head, then eyes/face
+4. Sit sprite (only when sitting)
+5. Feet or shoes
+6. Pants
+7. Shirt
+8. Front arm (+ sleeve)
+
+The other slots hook in around these steps: back item, back hair/hat, chest, face item, hair, hat, hand item. A data-driven item can also add a pass behind or in front of the whole avatar. The hook names and where each one fires are covered on the [ItemRenderers XML](/docs/character-rendering/item-renderers) page.
+
+<Callout type="warn" title="Order of the remaining slots">
+The exact position of the back item, face item, hair, hat and hand item relative to the steps above has not been fully traced yet.
+</Callout>
+
+---
+
+## 4. Tinting
+
+The client tints with a plain multiply that keeps the sprite's alpha:
+
+```ts
+function tint(img, hex) {
+  const c = new OffscreenCanvas(img.width, img.height), g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  g.globalCompositeOperation = 'multiply'; g.fillStyle = hex; g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(img, 0, 0);
+  return c;
+}
+```
+
+### Seed-colored clothing
+
+Clothing whose `visual_type` is one of `20, 22, 27, 38, 39` is drawn in two layers:
+
+- Frame `x` is tinted with the **seed color** of the item's seed (`item_id + 1`).
+- Frame `x + 1` is tinted with that seed's **overlay color** and drawn on top.
+
+Muscle Shirt, Super Shirt, High Heels and Crystal Wings all use this path. The colors come from `bg_col` / `fg_col` of the seed record in `items.dat` (see [Seed Rendering](/docs/items-dat/seed-rendering)).
+
+```ts
+const TINTED = new Set([20, 22, 27, 38, 39]);
+if (TINTED.has(item.visual_type)) {
+  const seed = items[item.id + 1];
+  blit(tint(tex, seed.bg_col), item.tex_x,     item.tex_y);
+  blit(tint(tex, seed.fg_col), item.tex_x + 1, item.tex_y);
+}
+```
+
+### Two-frame blink
+
+Clothing with `visual_type` 4 or 7 switches between frame `x` and `x + 1` every 200 ms:
+
+```ts
+const frame = item.tex_x + (Math.floor(nowMs / 200) & 1);
+```
+
+### Sleeves
+
+A shirt adds sleeve sprites to both arms. The sleeve frame index is stored in the shirt's item record. A value of `1` means "no sleeve".
+
+- The sleeve frame is tinted with the shirt seed's **seed color**.
+- Frames `0, 2, 4, 6, 10` are two-layer sleeves: frame `n + 1` is drawn on top, tinted with the **overlay color**.
+
+```ts
+const TWO_LAYER = 0x455; // bits 0,2,4,6,10
+const layers = (TWO_LAYER >> f) & 1 ? [[f, seedColor], [f + 1, overlayColor]] : [[f, seedColor]];
+```
+
+<Callout type="warn" title="Not covered">
+Dyed and rainbow clothing (`visual_type` 25) goes through a color-cycle function that is not decoded yet.
+</Callout>
+
+---
+
+## 5. Clothing Slots
+
+The `clothing_type` field in `items.dat` picks the slot:
+
+| `clothing_type` | Slot | Typical sheet |
+|---|---|---|
+| 0 | Hat | `player_hat*`, `player_cosmetics*` |
+| 1 | Shirt | `player_shirt*` |
+| 2 | Pants | `player_pants*` |
+| 3 | Shoes | `player_feet*` |
+| 4 | Face | `player_faceitem*` |
+| 5 | Hand | `player_handitem*` |
+| 6 | Back | `player_back*` |
+| 7 | Hair | `player_hair*` |
+| 8 | Chest | `player_chestitem*` |
+| 9 | Ancestral | — |
+
+Newer items from any slot live on the `player_cosmetics*` sheets.
+
+<Callout type="warn" title="Numbering">
+The renderer checks the shirt as slot `1` and the hat as slot `0`, so the numbering is 0-based. The Ancestral row has not been checked against code.
 </Callout>

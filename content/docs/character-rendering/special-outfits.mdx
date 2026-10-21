@@ -1,120 +1,139 @@
 ---
-title: Special Outfit Rendering & Edge Cases
-description: Deep dive into hovering, flight physics, limb invisibility masking (Rayman/Mermaid), mounts, pets, and the ItemRenderers XML system.
+title: Special Outfits
+description: The four ways an item can bypass the standard 32x32 sprite blit, with examples and how many items use each one.
 ---
 
-# Special Outfit Rendering & Edge Cases
+# Special Outfits
 
-When developing an animated set planner, ordinary clothing items map predictably to body slots. However, numerous special items override the character rig, alter physics, suppress default body parts, or hook into multi-pass rendering.
+A normal clothing item is one 32 × 32 frame drawn at its slot's position. About 600 items are drawn some other way. The client has **four separate mechanisms** for this, and an item can use more than one of them.
 
----
+| # | Mechanism | Where the data lives | Items |
+|---|---|---|---|
+| 1 | Visual-effect field | `visual_type` in `items.dat` | hundreds (most common values listed below) |
+| 2 | ItemRenderers XML | `GameData/ItemRenderers/*.xml` | 618 files |
+| 3 | Hardcoded item-ID checks | compiled into the renderer | 308 item IDs |
+| 4 | Full custom renderer | compiled into the renderer | Legendbot-009 |
 
-## 1. Limb Visibility Masking (`eRenderObjectFlags`)
-
-Growtopia handles limb invisibility and body part suppression through a 10-bit bitmask (`eRenderObjectFlags`) evaluated by the renderer before drawing each layer:
-
-| Bit | Hex | Flag Name | In-Game Effect | Example Items |
-|---|---|---|---|---|
-| `Bit 0` | `0x001` | `RENDER_OBJECT_FLAG_NO_FEET` | Suppresses `RenderShoes` and default feet sprites. | Mermaid Tails, Hoverboards, Ghost Costumes |
-| `Bit 1` | `0x002` | `RENDER_OBJECT_FLAG_NO_LEGS` | Suppresses `RenderPants` and leg frames. | Long Robes, Raptor Legs, Ghastly Robe |
-| `Bit 2` | `0x004` | `RENDER_OBJECT_FLAG_HOVER` | Lifts player off the ground; activates hover idle. | Wings, Jetpacks, Floating Eyes, Magic Carpets |
-| `Bit 3` | `0x008` | `RENDER_OBJECT_FLAG_NO_FACE` | Suppresses facial expressions and eye blinking. | Full-face Helmets, TV Heads, Solid Masks |
-| `Bit 4` | `0x010` | `RENDER_OBJECT_FLAG_TRANSPARENT_SKIN` | Renders body and skin with 50% opacity / ghost alpha. | Tactical Stealth Device, Invisibility Potion |
-| `Bit 5` | `0x020` | `RENDER_OBJECT_FLAG_NO_ARMS` | Suppresses standard upper and lower arm sprites. | Rayman's Fists, Thingamabob |
-| `Bit 6` | `0x040` | `RENDER_OBJECT_FLAG_FRONT_ARM_PUNCH` | Overrides front arm with custom punch frame. | Custom punch gauntlets |
-| `Bit 7` | `0x080` | `RENDER_OBJECT_FLAG_REPLACEMENT_SPRITE` | Replaces default body texture with an item texture. | Specialized morph suits |
-| `Bit 8` | `0x0100` | `RENDER_OBJECT_FLAG_NO_HEAD` | Suppresses head base, face, and eyes completely. | Dullahan Head, Headless Horseman |
-| `Bit 9` | `0x0200` | `RENDER_OBJECT_FLAG_NO_SHADOWS` | Suppresses the ground drop shadow ellipse. | Ethereal Spirits, Flying Clouds |
-
-### The Rayman's Fists Special Case
-In the game binary (`0x100a73d81`), equipping **Rayman's Fists** (Item ID `5480`) activates `RENDER_OBJECT_FLAG_NO_ARMS`:
-- Standard upper arm and forearm sprites are hidden.
-- The gloves are drawn as floating disembodied hands.
-- **Full Rayman Set Bonus (`0x100a3ccae`):** If all 5 pieces (Fists `5480`, Feet `5482`, Hoody `5484`, Hair `5486`, Face `5488`) are equipped simultaneously, the client triggers an innate flight offset identical to riding mounts.
-
-### The Mermaid Tail Special Case
-Items like *Merrows Tail* or *Mermaid Tail* activate `RenderShoesWithMermaidTail`:
-- `RENDER_OBJECT_FLAG_NO_FEET` is toggled on (hiding feet and shoes).
-- `IsToRenderPants` is set to `false` (hiding trousers).
-- A 4-frame animated swimming tail sprite is rendered with sinusoidal swaying.
+A planner that only blits the item's frame renders all of these wrong.
 
 ---
 
-## 2. Flight & Hovering Mechanics
+## 1. Visual-Effect Field (`visual_type`)
 
-Items with `RENDER_OBJECT_FLAG_HOVER` (or `ShouldHover = true` in their renderer config) change avatar physics:
+The renderer reads the item's `visual_type` byte and changes how the frame is drawn. All values below are confirmed in code:
 
-1. **Vertical Elevation:** The root pelvis anchor is raised by an offset `Y_float` (typically 10 to 14 pixels above ground).
-2. **Hover Oscillation:** A gentle sinusoidal vertical wave is applied continuously:
-   ```text
-   Y_hover(t) = Y_base + sin(t * 2.8) * 3.0
-   ```
-3. **Walk Cycle Suppression:** Walking stride is disabled (`DisableWalkAnimation = true`). Feet dangle slightly backward while moving.
-4. **Shadow Attenuation:** The ground drop shadow remains projected on the floor block, but scales down in size and drops to 40% opacity.
+| Value | Effect | Example |
+|---|---|---|
+| `4`, `7` | Blink between frame `x` and `x + 1` every 200 ms | — |
+| `8` (shirt) | **Hide both arms** (back and front arm skipped) | Giant Snowball Suit, Arcane Armor, Kimonos, Cultist Robe |
+| `20, 22, 27, 38, 39` | Two-layer seed tint (frame `x` seed color, `x + 1` overlay color) | Muscle Shirt, High Heels, Crystal Wings |
+| `25` | Color-cycling (rainbow) tint | — |
 
----
+The tint and blink rules are described in [Character Rendering → Tinting](/docs/character-rendering#4-tinting).
 
-## 3. Mounts, Rides & Vehicles
+### Armless shirts (`visual_type = 8`)
 
-Vehicles (such as *Bone Bike*, *Cyber Cycle*, *Garuda Mount*, *Riding Rabbid*) utilize a **multi-pass split**:
+When the equipped shirt has `visual_type == 8`, the arm sprites and their sleeves are not drawn. Bulky costumes rely on this: their sprite already includes the arms, or the body is a ball. 22 shirts use it:
 
-```text
-RenderBehind  --> [Draws rear wheels, rear bike frame, or saddle]
-  └── Avatar   --> [Character drawn in sitting pose at sit_transform offset]
-        └── RenderInFront --> [Draws front chassis, steering handlebars, windshield]
+> Cultist Robe, Growch Cultist Robe, Architect's Robes, Pink/Blue/Orange Kimono, Winter Freezer Robe, Ultra Winter Freezer Robe, Emperor's Jacket, Drednok's Robe, Kuchisake Kimono, Pocong Clothes, Emperor's New Robes, Jellyfish Onesie, Arcane Armor, Royal Arcane Armor, Body of Ahool, Candlewick's Dress, Aurora Robe, Hanfu, REALLY Really Big Jeans, Giant Snowball Suit
+
+```ts
+const noArms = equipped.shirt?.visual_type === 8 || equipped.hand?.id === 5480; // 5480 = Rayman's Fist
+if (!noArms) { drawBackArm(); /* ... */ drawFrontArm(); }
 ```
 
-### Transform Overrides
-Vehicle renderers inject `<AvatarTransform>` directives into the character rig:
-- **`FootPosition`:** Sets `foot1dy = 0` and `foot2dy = 0` to lock the player's feet onto pedals or footrests instead of walking.
-- **`ArmAngle`:** Forces `arm1Angle` and `arm2Angle` to 280 degrees (gripping handlebars).
-- **`UserNameOffset`:** Shifts the player name label upward (e.g., +16 to +24 pixels) so it is not obscured by tall mounts.
+<Callout type="info" title="Giant Snowball Suit">
+This one has no XML and no ID check. Its whole special look comes from `visual_type = 8`: the arms disappear and only the ball sprite is left.
+</Callout>
+
+<Callout type="warn" title="Other values">
+Many other values appear on clothing: `4` (247 items, mostly back), `6` (378, mostly hand), `23` (123, face), `47` (74, hair), `19`, `20`, and others. Only the rows in the table above have been traced in code.
+</Callout>
+
+### Not a hide mask
+
+The item record also has a byte at the position the docs call `aura_slots[0]`. The renderer checks it as a per-part hide mask:
+
+| Bit | Hides |
+|---|---|
+| `0x04` | Standard shirt blit |
+| `0x08` | Front arm |
+| `0x10` | Back arm |
+
+In the current `items.dat` (v27), this byte is `0` for every one of the 16,434 items. In practice it is never used, so arm hiding always comes from `visual_type`.
 
 ---
 
-## 4. Flying Pets & Familiars
+## 2. ItemRenderers XML
 
-Items equipped with companion familiars (e.g., *Mighty Eagle*, *Missile Toad Pet*, *Noble Phoenix*) activate the `RenderPet` pass:
+This is the biggest group. An XML file describes extra sprites, offsets and animations, and hooks them into named render passes. The full format is covered in [ItemRenderers XML](/docs/character-rendering/item-renderers).
 
-- **Spring-Damper Following:** The pet does not stick rigidly to the player. It trails the avatar with smoothed spring lag:
-  ```text
-  X_pet(t) = X_player + (facingLeft ? 20 : -20) + sin(t * 2.0) * 2.0
-  Y_pet(t) = Y_player - 16.0 + cos(t * 2.5) * 3.0
-  ```
-- **Facing Mirroring:** When `PetUpdatesFacing = true`, the pet horizontally flips whenever the player turns left or right.
-- **Z-Index Layering:** Controlled by `IsPetBehind`. If `true`, the pet renders at Layer 2 (behind the player); if `false`, it renders at Layer 23 (in front of all clothing).
+Example, Arcane Armor:
+
+- `RenderShirt` replaces the shirt blit with the armor plate. On top of it sits a glow frame that pulses over 5 s.
+- `RenderBehind` / `RenderInFront` add two floating claws on magic circles at `(±31.6, −29.15)` from the avatar.
+- Together with `visual_type = 8`, the real arms are hidden, so the claws act as the hands.
 
 ---
 
-## 5. The Data-Driven `ItemRenderers` XML System
+## 3. Hardcoded Item-ID Checks
 
-For **319+ advanced items** in `items.dat` (starting in schema v16), field `s2` points to an external XML renderer definition stored in `GameData/ItemRenderers/<Name>.xml`.
+The draw functions compare the worn item ID against constants. Scanning the avatar draw code found **308 different item IDs** checked this way. Most checks are small tweaks, such as shifting a sprite by a few pixels, picking another frame, or skipping a body part.
 
-### XML Structure
-```xml
-<ItemRenderer>
-  <Data>
-    <!-- Spritesheet references -->
-    <Sprite name="s_wings" fileName="game/player_cosmetics4.rttex" textureSize="32" frame="0,4"/>
-    
-    <!-- State machine for animation -->
-    <StateMachines>
-      <StateMachine name="Motion">
-        <States>
-          <State name="Idle"/>
-          <State name="Walk"/>
-        </States>
-      </StateMachine>
-    </StateMachines>
-  </Data>
+| Slot | IDs | Typical items |
+|---|---|---|
+| Shoes | 129 | Vehicles and mounts: Pleiadian Star Ship, Toboggan, Floating Leaf, Magic Carpet, Riding RV |
+| Back | 54 | Vampire Cape, Phoenix Wings, Golden Aura |
+| Hand | 53 | Guitars, Basketball, Party Blaster |
+| Chest | 18 | |
+| Hat | 15 | |
+| Face | 15 | Vampire Fangs, Sabertooth Growtopian |
+| Shirt | 10 | Galaxy Skin (14 checks) |
+| Hair | 7 | Afro, Cultist Hood |
+| Pants | 7 | Mermaid Tail (12 checks), Raptor Legs (11) |
 
-  <!-- Pass hooks and condition filters -->
-  <RenderRules>
-    <RenderBackpack>
-      <SpriteRender name="s_wings" offset="0,-4" alignment="DOWN_CENTER"/>
-    </RenderBackpack>
-  </RenderRules>
-</ItemRenderer>
+The items with the most checks are almost all rides: Zamgrowni, Sturdy Crackfire Fighter, Wacky Rocket Sled, Pineapple Plough, Alien Recon Wagon, Demon Night Stallion. Rides move the whole avatar, so many draw steps have their own branch.
+
+Examples that have been traced:
+
+```ts
+// pants: these shoes hide the pants entirely
+if ([0x2f12, 0x3340, 0x29aa, 0x2ba0].includes(shoes.id) || (shoes.id >= 0x22c2 && shoes.id < 0x22c9)) skipPants();
+
+// pants: some shoes push the pants 1 px left/right and 2 px down
+if (shoesShiftPants(shoes.id)) { x -= facingLeft ? -1 : 1; y += 2; }
+
+// feet: frame + 1 when foot < -0.5, except for a few shoes
+if (foot < -0.5 && ![0x62e, 0x950, 0x95a, 0x126a, 0x2aee].includes(shoes.id)) frame++;
 ```
 
-When building an animated set planner, supporting these XML files allows rendering advanced cosmetics (wings, auras, vehicles, and pets) without writing custom hardcoded JavaScript for every new item.
+<Callout type="warn" title="Not ported">
+The table is a complete list of *which* items are special-cased. What each branch actually does has only been worked out for the examples above.
+</Callout>
+
+---
+
+## 4. Full Custom Renderer: Legendbot-009
+
+Legendbot-009 (`1780`) is the only item with a complete renderer of its own. When it is the equipped shirt, the normal body path is replaced: the client assembles a mech out of parts.
+
+- Textures: `lb9_parts` (64 × 64 cells) and `lb9_back` (41 × 47). Both are loaded once with the other avatar textures.
+- Pieces, back to front: back arm, body, legs, head, hat, front arm.
+- Each piece has its own offset from the avatar, for example `(X + 21, ...)`, `(..., Y − 29)`, `(X + 20, Y − 32)`, `(..., Y − 15)`.
+
+<Callout type="warn" title="Not ported">
+The exact frame for each piece has not been mapped yet. A planner that blits the 32 × 32 shirt frame shows only a small chest piece.
+</Callout>
+
+---
+
+## 5. Checking an Item
+
+To see which mechanisms an item uses:
+
+1. Read `visual_type` from `items.dat`. A value of `8` on a shirt means armless. Tint and blink values change the frame.
+2. Look for `GameData/ItemRenderers/<Name>.xml`. The file name is usually the item name without spaces, and the item record points to it.
+3. Check the item's ID against the hardcoded list.
+4. If the item is `1780`, it uses the Legendbot path.
+
+Items that hit none of these are drawn as a single 32 × 32 frame.

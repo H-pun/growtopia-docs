@@ -1,136 +1,132 @@
 ---
-title: Animation Engine & Motion States
-description: Mathematical formulas, skeletal bone transforms, and procedural animation cycles for Growtopian character movement.
+title: Animation Engine
+description: How feet and arms move in the idle, walk and air states, using target values and fixed per-second steps instead of sine waves.
 ---
 
-# Animation Engine & Motion States
+# Animation Engine
 
-Rather than storing hundreds of pre-rendered sprite frames for every combination of clothing, Growtopia uses **procedural skeletal transforms** combined with small frame sequences. Body parts and clothing items translate and rotate dynamically in real time.
-
----
-
-## 1. Skeletal Bone Hierarchy
-
-The character rig is organized in a hierarchical tree where child parts inherit transforms from their parents:
-
-```text
-Root (World Position)
- └── Pelvis (Base Y + Hover/Bobbing Offset)
-      ├── Legs & Feet (foot1, foot2 stride offsets)
-      └── Torso (Shirt & Chest accessories)
-           ├── Rear Arm & Hand Item (arm2Angle)
-           ├── Front Arm & Hand Item (arm1Angle)
-           └── Head
-                ├── Face Expression & Eye Blink
-                ├── Front & Back Hair
-                └── Hat & Accessories
-```
-
-When the player moves, jumps, or idles, mathematical oscillation functions modify bone translation offsets (`dx`, `dy`) and rotation angles.
+Avatar movement uses no sine curves. Each limb has a value and a target. Every frame, the value moves toward its target by a fixed amount per second. The state machine decides when the targets change. This is what makes the Growtopia walk look "snappy" instead of smooth.
 
 ---
 
-## 2. Motion Cycles & Mathematical Formulas
+## 1. Limb State
 
-### Idle Cycle (Breathing & Bobbing)
-When standing still (`speed == 0`), the avatar breathes with a subtle vertical sinusoidal bobbing:
-
-```text
-Y_idle(t) = sin(t * 3.5) * 1.0  (pixels)
-```
-
-- **Torso & Head:** Displaced vertically by `Y_idle(t)`.
-- **Arms:** Relaxed at rest angle (0 degrees).
-- **Eye Blinking:** A periodic timer triggers a 3-frame blink sequence (`Open` -> `Half` -> `Closed` -> `Open`) every 2.5 to 5.0 seconds.
-
-### Walk Cycle (Running Stride)
-During lateral movement (`speed.x != 0`):
-
-1. **Feet Stride (Opposing Sine Waves):**
-   ```text
-   foot1_dy = sin(t * walk_speed) * 3.0
-   foot2_dy = -sin(t * walk_speed) * 3.0
-   ```
-2. **Torso Vertical Bounce:**
-   The body bounces slightly with each footstep using absolute sine oscillation:
-   ```text
-   body_dy = abs(sin(t * walk_speed)) * 1.5
-   ```
-3. **Arm Counter-Swing:**
-   The front and back arms swing in opposite directions to counterbalance leg motion:
-   ```text
-   arm1_angle = sin(t * walk_speed) * 25.0  (degrees)
-   arm2_angle = -sin(t * walk_speed) * 25.0 (degrees)
-   ```
-
-### Jump & Fall Cycle
-When in the air (`onGround == false`):
-
-| State | Condition | Bone Transformations |
+| Field | Meaning | Range |
 |---|---|---|
-| **Rising (Jump)** | `speed.y < -0.1` | Arms angle upward (280 degrees / Superman pose). Feet pull upward (`dy = -2.0`). Hair trails slightly downward. |
-| **Falling** | `speed.y > 0.1` | Arms spread outward (45 degrees). Legs extend downward. Hair flutters upward. |
+| `foot1`, `foot2` | Foot vertical offset in px (positive = down) | clamped `[-2, 1]` |
+| `tgt1`, `tgt2` | Where each foot is heading | |
+| `arm1`, `arm2` | Back / front arm angle in degrees | `[0, 360)` |
+| `phase`, `lead` | Which foot is currently stepping | bool |
 
-### Punch Cycle
-When triggering a punch or tool action:
-1. **Front Arm Extension:** `arm1` rotates toward the cursor or straight ahead (0 degrees).
-2. **Sprite Substitution:** The standard arm (`player_arm.rttex`) is replaced by the punch arm (`player_puncharm.rttex` or `custom_punch` texture).
-3. **Recoil Pulse (`UseRecoilAnim`):** The torso and head shift backward by 1–2 pixels for 60ms, then return to baseline.
+Two helpers do all the motion:
 
----
+```ts
+// linear move toward target, stops exactly on it
+const approach = (v, t, step) => v <= t ? Math.min(v + step, t) : Math.max(v - step, t);
 
-## 3. Minimal Web Animation Loop (JavaScript / Canvas)
-
-Below is an authentic procedural animation loop implementation suitable for a web-based set planner:
-
-```javascript
-export class GrowtopianRig {
-  constructor() {
-    this.time = 0;
-    this.facingLeft = false;
-    this.action = 'IDLE'; // IDLE, WALK, JUMP, FALL, PUNCH
-    this.blinkFrame = 0;  // 0=Open, 1=Half, 2=Closed
-    this.nextBlink = 3000;
-  }
-
-  update(deltaTimeMs) {
-    this.time += deltaTimeMs / 1000.0;
-
-    // 1. Eye Blink Logic
-    this.nextBlink -= deltaTimeMs;
-    if (this.nextBlink <= 0) {
-      if (this.nextBlink > -60) this.blinkFrame = 1;
-      else if (this.nextBlink > -140) this.blinkFrame = 2;
-      else if (this.nextBlink > -200) this.blinkFrame = 1;
-      else {
-        this.blinkFrame = 0;
-        this.nextBlink = 2500 + Math.random() * 3000;
-      }
-    }
-
-    // 2. Bone Transforms based on action
-    let bodyDy = 0;
-    let foot1Dy = 0;
-    let foot2Dy = 0;
-    let arm1Angle = 0;
-    let arm2Angle = 0;
-
-    if (this.action === 'IDLE') {
-      bodyDy = Math.sin(this.time * 3.5) * 1.0;
-    } else if (this.action === 'WALK') {
-      const walkFreq = 10.0;
-      bodyDy = Math.abs(Math.sin(this.time * walkFreq)) * 1.5;
-      foot1Dy = Math.sin(this.time * walkFreq) * 3.0;
-      foot2Dy = -Math.sin(this.time * walkFreq) * 3.0;
-      arm1Angle = Math.sin(this.time * walkFreq) * 25.0;
-      arm2Angle = -Math.sin(this.time * walkFreq) * 25.0;
-    } else if (this.action === 'JUMP') {
-      bodyDy = -2.0;
-      arm1Angle = -45.0;
-      arm2Angle = 45.0;
-    }
-
-    return { bodyDy, foot1Dy, foot2Dy, arm1Angle, arm2Angle, blinkFrame: this.blinkFrame };
-  }
+// angle move toward target, wraps through 0/360 when that is shorter
+function approachDeg(v, t, step) {
+  const d = Math.abs(t - v), s = Math.min(step, d);
+  if (d < 180) return t <= v ? v - s : v + s;
+  const r = v <= t ? v - s : v + s;
+  return ((r % 360) + 360) % 360;
 }
 ```
+
+---
+
+## 2. States
+
+The avatar state is one of `idle`, `walk`, or `air`. `air` applies whenever the player is off the ground.
+
+### Idle
+
+```ts
+foot1 = approach(foot1, tgt1, 20 * dt);
+foot2 = approach(foot2, tgt2, 20 * dt);
+tgt1 = tgt2 = 0;
+const fast = Math.abs(arm1) > 20 || Math.abs(arm2) > 20;
+arm1 = approachDeg(arm1, 0, (fast ? 900 : 100) * dt);
+arm2 = approachDeg(arm2, 0, (fast ? 900 : 100) * dt);
+```
+
+The body itself does not bob in idle. Only the limbs settle back to rest.
+
+When horizontal velocity becomes non-zero, the state switches to walk. Entering walk flips the leading foot. The leading foot's target becomes `-2` (lifted) and the other foot's target becomes `0`.
+
+### Walk
+
+```ts
+const step = Math.abs(velX) / maxSpeed * 20 * dt;
+foot1 = approach(foot1, tgt1, step);
+foot2 = approach(foot2, tgt2, step);
+
+if (!phase && foot1 <= tgt1)     { phase = true;  foot1 = tgt1; tgt1 = 1; tgt2 = -2; }
+else if (phase && foot2 <= tgt2) { phase = false; foot2 = tgt2; tgt2 = 1; tgt1 = -2; }
+
+// arms follow the feet
+arm1 = approachDeg(arm1, wrap360((foot1 + 1) * 20), 900 * dt);
+arm2 = approachDeg(arm2, wrap360((foot2 + 1) * 20), 900 * dt);
+```
+
+The feet alternate. One foot is lifted to `-2` while the other is pushed to `1`. The arms have no motion of their own: each arm angle is derived from its foot, so they swing in step with the legs.
+
+When velocity drops back to zero, the state returns to idle.
+
+<Callout type="info" title="Held weapons">
+Some held items change the walk: `arm1` targets `(foot1 + 1) * 10 - 45` instead, which keeps the arm raised.
+</Callout>
+
+### Air (jump / fall / hover)
+
+```ts
+foot1 = approach(foot1, tgt1, 30 * dt);
+foot2 = approach(foot2, tgt2, 30 * dt);
+const [t, angle, speed] = rising ? [1, 200, 900] : [-2, 330, 200];
+tgt1 = tgt2 = t;
+arm1 = approachDeg(arm1, angle, speed * dt);
+arm2 = approachDeg(arm2, angle, speed * dt);
+```
+
+- **Rising** (`velY < 0`): feet go down, arms swing fast to 200° (raised).
+- **Falling or hovering** (`velY >= 0`): feet go up, arms ease slowly to 330°.
+
+Once the state is updated, both feet are clamped to `[-2, 1]`.
+
+<Callout type="warn" title="Not covered">
+Not decoded yet: item-specific air branches (arms at 200°, or 115°/245°), the punch arm, and the other states (sit, swim, ride, etc.).
+</Callout>
+
+---
+
+## 3. Blink
+
+Eyes use 3 frames: open, half, closed. The planner shows the closed sequence for about 200 ms every 2.5–5.5 s.
+
+<Callout type="warn" title="Guess">
+Blink timing was fitted by eye. It is not taken from code.
+</Callout>
+
+---
+
+## 4. Using It in a Planner
+
+A planner has no physics, so the inputs are faked:
+
+| Planner action | Input |
+|---|---|
+| Idle | `velX = 0`, on ground |
+| Walk | `velX = maxSpeed`, on ground |
+| Jump | air, rising |
+| Fly / hover | air, `velY = 0` (falling branch) |
+
+```ts
+function step(dt, action) {
+  if (action === 'JUMP' || action === 'FLY') air(dt, action === 'JUMP');
+  else if (action === 'WALK') { if (!walking) startWalk(); walk(dt, 1); }
+  else { walking = false; idle(dt); }
+  foot1 = clamp(foot1, -2, 1); foot2 = clamp(foot2, -2, 1);
+}
+```
+
+The resulting feet and arm values go straight into the draw code described in [Character Rendering](/docs/character-rendering).

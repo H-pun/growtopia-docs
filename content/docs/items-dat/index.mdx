@@ -52,7 +52,7 @@ Following the 6-byte header, item records appear sequentially from `item_id = 0`
 | 5 | `name` | `string` | v0 | Item display name. In **v3+**, encoded with an [XOR cipher](/docs/items-dat/cypher) using key `PBG892FXX982ABC*`. |
 | 6 | `texture_file` | `string` | v0 | Primary spritesheet path (e.g., `tiles_page1.rttex`). |
 | 7 | `texture_hash` | `uint32` | v0 | Checksum/hash of the primary texture. |
-| 8 | `visual_type` | `uint8` | v0 | Visual shader effect (0=Normal, 1=Tinted, 25=Rainbow/Shifty, etc.). |
+| 8 | `visual_type` | `uint8` | v0 | Render effect used by the avatar drawer (4/7=2-frame blink, 8=armless shirt, 20/22/27/38/39=seed-color tint, 25=color cycle). See [Special Outfits](/docs/character-rendering/special-outfits). |
 | 9 | `cook_time` | `uint32` | v0 | Cooking duration in seconds (`0xFFFFFFFF` if not cookable). |
 | 10 | `tex_x` | `uint8` | v0 | X coordinate in texture sheet (in units of 32 pixels). |
 | 11 | `tex_y` | `uint8` | v0 | Y coordinate in texture sheet (in units of 32 pixels). |
@@ -97,11 +97,11 @@ Following the 6-byte header, item records appear sequentially from `item_id = 0`
 | 50 | `sit_type` | `uint8` | v15 | Seating type (0=Chair, 1=Mount/Vehicle). |
 | 51 | `sit_transform` | `uint64[3]` (24B) | v15 | Character 3D anchor offset ($X, Y, Z$) when sitting on this object. |
 | 52 | `alt_sit_path` | `string` | v15 | Sitting pose spritesheet path (e.g., `game/player_sit2.rttex`). |
-| 53 | `alt_hair_path` | `string` | v16 | Alternative hair texture when wearing covering hats or helmets. |
+| 53 | `renderer_file` | `string` | v16 | ItemRenderers XML file name (e.g., `GrowchBod.xml`), loaded from `GameData/ItemRenderers/`. Empty for normal items. See [ItemRenderers XML](/docs/character-rendering/item-renderers). |
 | 54 | `light_radius` | `uint32` | v17 | Light emission radius and intensity in dark worlds. |
 | 55 | `shader_effect` | `uint32` | v18 | Post-processing shader / glow highlight index. |
 | 56 | `collision_bounds` | `uint8` + `uint32[2]` (9B) | v19 | Custom physics collision bounding box ($x, y, w, h$). |
-| 57 | `aura_slots` | `uint8[2]` | v21 | Socket slots for weather / aura attachments. |
+| 57 | `aura_slots` | `uint8[2]` | v21 | Byte 0 is read by the renderer as a part-hide mask (`0x04` shirt, `0x08` front arm, `0x10` back arm). It is `0` for every item in v27. Byte 1 is not decoded. |
 | 58 | `description` | `string` | v22 | **Plaintext In-Game Description**. See [Item Descriptions](/docs/items-dat/description). |
 | 59 | `seed1` | `uint16` | v23 | First parent seed ID in splice cross-breeding recipe. *(Moved to tail in v23)*. |
 | 60 | `seed2` | `uint16` | v23 | Second parent seed ID in splice cross-breeding recipe. *(Moved to tail in v23)*. |
@@ -235,7 +235,7 @@ class ItemsDat:
                 sit_type = self._r_u8(); sit_transform = self._r_bytes(24)
                 alt_sit_path = self._r_str()
             if self.version >= 16:
-                alt_hair_path = self._r_str()
+                renderer_file = self._r_str()  # ItemRenderers XML
             if self.version >= 17:
                 light_radius = self._r_u32()
             if self.version >= 18:

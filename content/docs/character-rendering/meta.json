@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "animation-engine",
-    "special-outfits"
+    "special-outfits",
+    "item-renderers"
   ]
 }
